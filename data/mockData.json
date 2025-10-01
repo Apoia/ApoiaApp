@@ -1,0 +1,282 @@
+{
+  "user": {
+    "name": "Gabriel Cordeiro",
+    "profileImage": "../assets/images/profile.png",
+    "level": 3,
+    "currentXP": 60,
+    "maxXP": 100,
+    "xpToNextLevel": 40
+  },
+  "monthlySummary": {
+    "month": "Maio",
+    "lastUpdated": "Atualizado hoje",
+    "profits": 2500.00,
+    "expenses": 850.50,
+    "positiveBalance": 1649.50,
+    "largestExpenseCategory": "Alimentação"
+  },
+  "goals": [
+    {
+      "id": 1,
+      "title": "Viagem dos sonhos",
+      "description": "Economizar R$ 500",
+      "icon": "✈️",
+      "color": "#4A90E2",
+      "progress": 0.3,
+      "targetAmount": 500,
+      "currentAmount": 150
+    },
+    {
+      "id": 2,
+      "title": "Aposentadoria",
+      "description": "Economizar R$ 1000",
+      "icon": "🏖️",
+      "color": "#50C878",
+      "progress": 0.6,
+      "targetAmount": 1000,
+      "currentAmount": 600
+    },
+    {
+      "id": 3,
+      "title": "Casa própria",
+      "description": "Economizar R$ 50000",
+      "icon": "🏠",
+      "color": "#FF6B6B",
+      "progress": 0.1,
+      "targetAmount": 50000,
+      "currentAmount": 5000
+    }
+  ],
+  "detailedGoals": {
+    "totalPoints": 1250,
+    "performanceGoals": [
+      {
+        "id": 1,
+        "type": "performance",
+        "title": "Economizar 15% da renda",
+        "icon": "piggy-bank",
+        "iconColor": "#87CEEB",
+        "progressType": "amount",
+        "currentAmount": 900,
+        "targetAmount": 1500,
+        "points": 250
+      },
+      {
+        "id": 2,
+        "type": "performance",
+        "title": "Quitar o cartão de crédito",
+        "icon": "card",
+        "iconColor": "#90EE90",
+        "progressType": "completed",
+        "completed": true,
+        "description": "Você zerou sua dívida!",
+        "points": 500
+      }
+    ],
+    "habitGoals": [
+      {
+        "id": 3,
+        "type": "habit",
+        "title": "Pagar faturas em dia",
+        "icon": "flame",
+        "iconColor": "#FFA07A",
+        "progressType": "streak",
+        "currentStreak": 5,
+        "points": 100
+      },
+      {
+        "id": 4,
+        "type": "habit",
+        "title": "Não pedir delivery",
+        "icon": "fast-food",
+        "iconColor": "#FFB6C1",
+        "progressType": "weekly",
+        "weeklyProgress": [true, true, false, true, false, false, false],
+        "points": 0
+      }
+    ]
+  },
+  "social": {
+    "currentUser": {
+      "name": "Gabriel",
+      "profileImage": "../assets/images/profile.png",
+      "followers": 100
+    },
+    "posts": [
+      {
+        "id": 1,
+        "user": {
+          "name": "Gabriel",
+          "profileImage": "../assets/images/profile.png"
+        },
+        "activity": {
+          "type": "achievement",
+          "icon": "trophy",
+          "text": "Gabriel conquistou",
+          "points": "+100 pontos",
+          "time": "hoje!"
+        },
+        "likes": 12,
+        "comments": 3,
+        "commentsList": [
+          {
+            "id": 1,
+            "user": {
+              "name": "Carlos",
+              "profileImage": "../assets/images/profile2.png"
+            },
+            "text": "Parabéns, Gabriel!",
+            "time": "1d"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "user": {
+          "name": "Pedro",
+          "profileImage": "../assets/images/profile3.png"
+        },
+        "activity": {
+          "type": "achievement",
+          "icon": "trophy",
+          "text": "Pedro conquistou",
+          "points": "+50 pontos",
+          "time": "hoje!"
+        },
+        "likes": 5,
+        "comments": 1,
+        "commentsList": [
+          {
+            "id": 2,
+            "user": {
+              "name": "Ana",
+              "profileImage": "../assets/images/profile4.png"
+            },
+            "text": "Continue assim!",
+            "time": "2d"
+          }
+        ]
+      }
+    ]
+  },
+  "profile": {
+    "user": {
+      "name": "Gabriel Cordeiro",
+      "email": "gabriel@exemplo.com",
+      "profileImage": "../assets/images/profile.png",
+      "joinDate": "Janeiro 2024",
+      "level": 3,
+      "totalPoints": 1250,
+      "achievements": 8,
+      "goalsCompleted": 5,
+      "currentStreak": 12
+    },
+    "stats": {
+      "totalSaved": 2500.00,
+      "totalInvested": 1500.00,
+      "debtPaid": 3000.00,
+      "monthlyBudget": 2000.00
+    },
+    "achievements": [
+      {
+        "id": 1,
+        "title": "Primeiro Poupador",
+        "description": "Economizou R$ 100 pela primeira vez",
+        "icon": "trophy",
+        "earned": true,
+        "date": "15 Jan 2024"
+      },
+      {
+        "id": 2,
+        "title": "Dedicação Semanal",
+        "description": "Manteve uma sequência de 7 dias",
+        "icon": "calendar",
+        "earned": true,
+        "date": "22 Jan 2024"
+      },
+      {
+        "id": 3,
+        "title": "Meta Mensal",
+        "description": "Atingiu sua meta mensal de economia",
+        "icon": "target",
+        "earned": true,
+        "date": "31 Jan 2024"
+      },
+      {
+        "id": 4,
+        "title": "Investidor Iniciante",
+        "description": "Fez seu primeiro investimento",
+        "icon": "trending-up",
+        "earned": false,
+        "date": null
+      }
+    ],
+    "settings": [
+      {
+        "id": 1,
+        "title": "Notificações",
+        "subtitle": "Receber lembretes e atualizações",
+        "icon": "notifications",
+        "type": "toggle",
+        "value": true
+      },
+      {
+        "id": 2,
+        "title": "Modo Escuro",
+        "subtitle": "Usar tema escuro",
+        "icon": "moon",
+        "type": "toggle",
+        "value": false
+      },
+      {
+        "id": 3,
+        "title": "Privacidade",
+        "subtitle": "Configurações de privacidade",
+        "icon": "shield",
+        "type": "navigate"
+      },
+      {
+        "id": 4,
+        "title": "Ajuda e Suporte",
+        "subtitle": "Central de ajuda",
+        "icon": "help-circle",
+        "type": "navigate"
+      },
+      {
+        "id": 5,
+        "title": "Sobre o App",
+        "subtitle": "Versão 1.0.0",
+        "icon": "information-circle",
+        "type": "navigate"
+      }
+    ]
+  },
+  "navigation": [
+    {
+      "id": "home",
+      "title": "Home",
+      "icon": "home",
+      "active": true
+    },
+    {
+      "id": "add",
+      "title": "Adicionar",
+      "icon": "plus"
+    },
+    {
+      "id": "goals",
+      "title": "Metas",
+      "icon": "trophy"
+    },
+    {
+      "id": "social",
+      "title": "Social",
+      "icon": "users"
+    },
+    {
+      "id": "profile",
+      "title": "Perfil",
+      "icon": "user"
+    }
+  ]
+}
