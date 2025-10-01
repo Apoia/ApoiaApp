@@ -207,6 +207,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
+    color: '#2c3e50',
   },
   eyeButton: {
     padding: 16,

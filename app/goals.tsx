@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import GoalCard from '../components/GoalCard';
+import DetailedGoalCard from '../components/DetailedGoalCard';
 import { useTheme } from '../contexts/ThemeContext';
 import mockData from '../data/mockData.json';
 import { createGoalsStyles } from '../styles/GoalsStyles';
@@ -88,7 +88,7 @@ export default function GoalsScreen() {
             
             <View style={styles.goalsList}>
               {mockData.detailedGoals.performanceGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} />
+                <DetailedGoalCard key={goal.id} goal={goal} />
               ))}
             </View>
           </View>
@@ -107,7 +107,7 @@ export default function GoalsScreen() {
             
             <View style={styles.goalsList}>
               {mockData.detailedGoals.habitGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} />
+                <DetailedGoalCard key={goal.id} goal={goal} />
               ))}
             </View>
           </View>

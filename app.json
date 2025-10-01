@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logoBranco.jpeg",
-        "backgroundColor": "#E6F4FE"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.gabrielcordeiro007.apoiaappgabriel"
     },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, SafeAreaView, ScrollView, Text, View } from 'react-native';
-import GoalsList from '../components/GoalsList';
+import IndividualGoalCard from '../components/IndividualGoalCard';
 import MonthlySummaryCard from '../components/MonthlySummaryCard';
 import ProgressCard from '../components/ProgressCard';
 import { useTheme } from '../contexts/ThemeContext';
@@ -49,8 +49,17 @@ export default function HomeScreen() {
           largestExpenseCategory={mockData.monthlySummary.largestExpenseCategory}
         />
 
-        {/* Lista de Metas */}
-        <GoalsList goals={mockData.goals} />
+        {/* Cards de Metas Individuais */}
+        {mockData.goals.map((goal) => (
+          <IndividualGoalCard 
+            key={goal.id} 
+            goal={goal} 
+            onPress={() => {
+              // Navegar para detalhes da meta ou ação
+              console.log('Meta clicada:', goal.title);
+            }}
+          />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );

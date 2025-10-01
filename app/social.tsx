@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import SocialPost from '../components/SocialPost';
 import { useTheme } from '../contexts/ThemeContext';
 import mockData from '../data/mockData.json';
@@ -11,6 +11,7 @@ export default function SocialScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = createSocialStyles(colors);
+  const [messageText, setMessageText] = useState('');
 
   const handleMenuPress = () => {
     console.log('Menu pressed');
@@ -18,6 +19,14 @@ export default function SocialScreen() {
 
   const handleProfilePress = () => {
     console.log('Profile pressed');
+  };
+
+  const handleSendMessage = () => {
+    if (messageText.trim()) {
+      console.log('Enviando mensagem:', messageText);
+      // Aqui você pode implementar a lógica para enviar a mensagem
+      setMessageText('');
+    }
   };
 
   return (
@@ -54,9 +63,35 @@ export default function SocialScreen() {
           <SocialPost key={post.id} post={post} />
         ))}
         
-        {/* Espaço para navegação inferior */}
+        {/* Espaço para input inferior */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Input de Mensagem */}
+      <View style={styles.messageInputContainer}>
+        <View style={styles.messageInputWrapper}>
+          <TextInput
+            style={styles.messageInput}
+            placeholder="Escreva uma mensagem..."
+            value={messageText}
+            onChangeText={setMessageText}
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity 
+            style={[styles.sendButton, !messageText.trim() && styles.sendButtonDisabled]} 
+            onPress={handleSendMessage}
+            disabled={!messageText.trim()}
+          >
+            <Ionicons 
+              name="send" 
+              size={20} 
+              color={messageText.trim() ? colors.primary : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
