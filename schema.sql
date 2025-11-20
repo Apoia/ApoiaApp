@@ -120,15 +120,22 @@ CREATE TABLE transacoes (
   data_pagamento DATE NULL,
   paga BOOLEAN DEFAULT false,
   observacao TEXT NULL,
+  -- Campos para parcelamento
+  eh_parcelada BOOLEAN DEFAULT false,
+  total_parcelas INTEGER NULL,
+  parcela_atual INTEGER NULL,
+  transacao_principal_id BIGINT NULL,
   data_criacao TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL
+  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL,
+  FOREIGN KEY (transacao_principal_id) REFERENCES transacoes(id) ON DELETE CASCADE
 );
 
 CREATE INDEX transacao_usuario_data_idx ON transacoes (usuario_id, data_transacao DESC);
 CREATE INDEX transacao_usuario_tipo_idx ON transacoes (usuario_id, tipo);
+CREATE INDEX transacao_principal_idx ON transacoes (transacao_principal_id);
 
 COMMENT ON COLUMN transacoes.usuario_id IS 'Obtido automaticamente do token de autenticação';
 COMMENT ON COLUMN transacoes.cartao_id IS 'Obrigatório apenas se forma_pagamento for credito ou debito';
@@ -142,6 +149,49 @@ COMMENT ON COLUMN transacoes.data_vencimento IS 'OPCIONAL mas RECOMENDADO: Data 
 COMMENT ON COLUMN transacoes.data_pagamento IS 'OPCIONAL: Data de pagamento se paga=true (YYYY-MM-DD)';
 COMMENT ON COLUMN transacoes.paga IS 'OPCIONAL: true se boleto já foi pago, false caso contrário';
 COMMENT ON COLUMN transacoes.observacao IS 'OPCIONAL: Código de barras, linha digitável ou outras informações do boleto';
+COMMENT ON COLUMN transacoes.eh_parcelada IS 'Indica se a transação faz parte de um parcelamento';
+COMMENT ON COLUMN transacoes.total_parcelas IS 'Total de parcelas da compra (apenas na primeira parcela)';
+COMMENT ON COLUMN transacoes.parcela_atual IS 'Número da parcela atual (1, 2, 3, etc.)';
+COMMENT ON COLUMN transacoes.transacao_principal_id IS 'ID da primeira transação do parcelamento (NULL se for a primeira)';
+
+-- ============================================
+-- 3.1. PARCELAS (Sistema de Parcelamento)
+-- ============================================
+-- Esta tabela gerencia as parcelas de compras parceladas no cartão de crédito
+-- Exemplo: TV de R$ 1.000,00 em 10x = 1 transação principal + 10 parcelas
+--
+-- COMO FUNCIONA:
+-- 1. Usuário cadastra compra parcelada: "TV Samsung" - R$ 1.000,00 - 10x
+-- 2. Sistema cria 1 transação principal (eh_parcelada=true, total_parcelas=10, parcela_atual=1)
+-- 3. Sistema cria 10 registros na tabela parcelas (um para cada parcela)
+-- 4. Cada parcela tem seu próprio vencimento e status de pagamento
+-- 5. Quando uma parcela é paga, atualiza a transação correspondente
+--
+CREATE TABLE parcelas (
+  id BIGSERIAL PRIMARY KEY,
+  transacao_id BIGINT NOT NULL,
+  numero_parcela INTEGER NOT NULL,
+  valor_parcela DECIMAL(12,2) NOT NULL,
+  data_vencimento DATE NOT NULL,
+  data_pagamento DATE NULL,
+  paga BOOLEAN DEFAULT false,
+  observacao TEXT NULL,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  FOREIGN KEY (transacao_id) REFERENCES transacoes(id) ON DELETE CASCADE,
+  CONSTRAINT parcela_unica UNIQUE (transacao_id, numero_parcela)
+);
+
+CREATE INDEX parcela_transacao_idx ON parcelas (transacao_id);
+CREATE INDEX parcela_vencimento_idx ON parcelas (data_vencimento);
+CREATE INDEX parcela_paga_idx ON parcelas (paga);
+
+COMMENT ON TABLE parcelas IS 'Gerencia parcelas de compras parceladas no cartão de crédito';
+COMMENT ON COLUMN parcelas.transacao_id IS 'ID da transação principal do parcelamento';
+COMMENT ON COLUMN parcelas.numero_parcela IS 'Número da parcela (1, 2, 3, ..., total_parcelas)';
+COMMENT ON COLUMN parcelas.valor_parcela IS 'Valor individual desta parcela';
+COMMENT ON COLUMN parcelas.data_vencimento IS 'Data de vencimento desta parcela específica';
+COMMENT ON COLUMN parcelas.paga IS 'Indica se esta parcela específica foi paga';
 
 -- ============================================
 -- 4. METAS
@@ -325,6 +375,62 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 --   "cartao_id": 1,
 --   "paga": false
 -- }
+--
+-- ============================================
+-- 1.1. CADASTRAR DESPESA PARCELADA (CARTÃO DE CRÉDITO)
+-- ============================================
+-- 
+-- IMPORTANTE: Para compras parceladas no cartão de crédito, a IA deve identificar
+-- que a compra é parcelada e enviar informações adicionais.
+--
+-- CAMPOS OBRIGATÓRIOS (além dos campos normais):
+--   - forma_pagamento: "credito" (obrigatório para parcelamento)
+--   - cartao_id: ID do cartão (obrigatório)
+--   - eh_parcelada: true (indica que é uma compra parcelada)
+--   - total_parcelas: Número total de parcelas (ex: 10)
+--   - valor: Valor TOTAL da compra (ex: 1000.00 para TV de R$ 1.000 em 10x)
+--
+-- CAMPOS OPCIONAIS:
+--   - data_primeira_parcela: Data de vencimento da primeira parcela (YYYY-MM-DD)
+--     Se não informado, será calculado automaticamente (próxima fatura do cartão)
+--
+-- COMO FUNCIONA:
+-- 1. IA identifica compra parcelada (ex: "TV Samsung - 10x de R$ 100,00")
+-- 2. IA envia payload com eh_parcelada=true e total_parcelas=10
+-- 3. Backend cria 1 transação principal + 10 registros na tabela parcelas
+-- 4. Cada parcela tem valor_parcela = valor_total / total_parcelas
+-- 5. Cada parcela tem data_vencimento calculada automaticamente (mensal)
+--
+-- EXEMPLO DE PAYLOAD - DESPESA PARCELADA (TV R$ 1.000 em 10x):
+-- {
+--   "tipo": "despesa",
+--   "descricao": "TV Samsung 55 polegadas - 10x sem juros",
+--   "valor": 1000.00,
+--   "categoria": "Eletrônicos",
+--   "data_transacao": "2024-11-20",
+--   "forma_pagamento": "credito",
+--   "cartao_id": 1,
+--   "eh_parcelada": true,
+--   "total_parcelas": 10,
+--   "data_primeira_parcela": "2024-12-10",
+--   "paga": false,
+--   "observacao": "Compra parcelada - Loja XYZ"
+-- }
+--
+-- RESULTADO NO BANCO:
+-- - 1 transação principal (id=100, valor=1000.00, eh_parcelada=true, total_parcelas=10)
+-- - 10 parcelas na tabela parcelas:
+--   * Parcela 1: valor_parcela=100.00, data_vencimento=2024-12-10
+--   * Parcela 2: valor_parcela=100.00, data_vencimento=2025-01-10
+--   * Parcela 3: valor_parcela=100.00, data_vencimento=2025-02-10
+--   * ... até Parcela 10: data_vencimento=2025-09-10
+--
+-- NOTAS IMPORTANTES:
+--   - O valor enviado é o VALOR TOTAL da compra, não o valor da parcela
+--   - O sistema calcula automaticamente o valor de cada parcela (valor / total_parcelas)
+--   - Se data_primeira_parcela não for informada, usa o dia_vencimento do cartão
+--   - Cada parcela será exibida separadamente no app, mas agrupada pela transação principal
+--   - Ao pagar uma parcela, apenas ela é marcada como paga, não todas
 --
 -- ============================================
 -- 2. CADASTRAR RECEITA (COMPROVANTE/DEPÓSITO)
