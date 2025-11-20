@@ -1,44 +1,56 @@
 -- ============================================
 -- ESQUEMA COMPLETO DO BANCO DE DADOS - APOIAPP
+-- PostgreSQL (Supabase)
 -- ============================================
+
+-- ============================================
+-- TIPOS ENUM
+-- ============================================
+CREATE TYPE tipo_meta AS ENUM ('performance', 'habit');
+CREATE TYPE tipo_progresso AS ENUM ('amount', 'completed', 'streak', 'weekly');
 
 -- ============================================
 -- 1. USUÁRIOS
 -- ============================================
 CREATE TABLE usuarios (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY,
   nome VARCHAR(120) NOT NULL,
   email VARCHAR(255) NOT NULL,
   telefone VARCHAR(20) NULL,
   senha_hash TEXT NOT NULL,
   imagem_perfil_url TEXT NULL,
-  data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  ativo BOOLEAN DEFAULT TRUE,
+  data_cadastro TIMESTAMP DEFAULT NOW(),
+  ativo BOOLEAN DEFAULT true,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL
 );
 
 CREATE UNIQUE INDEX usuario_email_idx ON usuarios (LOWER(email));
 
+COMMENT ON COLUMN usuarios.id IS 'ID único do usuário';
+COMMENT ON COLUMN usuarios.email IS 'Email único do usuário (case-insensitive)';
+COMMENT ON COLUMN usuarios.telefone IS 'Telefone do usuário no formato internacional';
+
 -- ============================================
 -- 2. CARTÕES
 -- ============================================
 CREATE TABLE cartoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
   nome VARCHAR(80) NOT NULL,
   ultimos_4_digitos VARCHAR(4) NULL,
   bandeira VARCHAR(30) NULL,
   limite_total DECIMAL(12,2) NULL,
   limite_disponivel DECIMAL(12,2) NULL,
-  dia_vencimento INT NULL,
-  ativo BOOLEAN DEFAULT TRUE,
-  data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  dia_vencimento INTEGER NULL,
+  ativo BOOLEAN DEFAULT true,
+  data_criacao TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
-  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  INDEX cartao_usuario_idx (usuario_id)
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX cartao_usuario_idx ON cartoes (usuario_id);
 
 -- ============================================
 -- 3. TRANSAÇÕES (Receitas e Despesas)
@@ -63,7 +75,7 @@ CREATE TABLE cartoes (
 --   - observacao: Informações adicionais extraídas do boleto (código de barras, linha digitável, etc.)
 --   - cartao_id: ID do cartão se a despesa foi paga com cartão (NULL se não aplicável)
 --
--- EXEMPLO DE PAYLOAD PARA IA:
+-- EXEMPLO DE PAYLOAD PARA IA - DESPESA:
 -- {
 --   "tipo": "despesa",
 --   "descricao": "CONTA DE ENERGIA ELÉTRICA - REF NOV/2024",
@@ -76,6 +88,17 @@ CREATE TABLE cartoes (
 --   "observacao": "Código de barras: 34191.09008 01234.567890 12345.678901 2 98760000024580"
 -- }
 --
+-- EXEMPLO DE PAYLOAD PARA IA - RECEITA:
+-- {
+--   "tipo": "receita",
+--   "descricao": "Salário - Novembro 2024",
+--   "valor": 3500.00,
+--   "categoria": "Salário",
+--   "data_transacao": "2024-11-05",
+--   "forma_pagamento": "pix",
+--   "observacao": "Depósito automático - Empresa XYZ"
+-- }
+--
 -- NOTAS IMPORTANTES:
 --   - O usuario_id é automaticamente obtido do token de autenticação (não precisa enviar)
 --   - Se forma_pagamento for 'credito' ou 'debito', o cartao_id se torna obrigatório
@@ -84,90 +107,126 @@ CREATE TABLE cartoes (
 --   - A data_vencimento é crucial para boletos e deve ser extraída do documento
 --
 CREATE TABLE transacoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL COMMENT 'Obtido automaticamente do token de autenticação',
-  cartao_id BIGINT UNSIGNED NULL COMMENT 'Obrigatório apenas se forma_pagamento for credito ou debito',
-  tipo VARCHAR(20) NOT NULL COMMENT 'receita ou despesa - Para boletos sempre usar "despesa"',
-  descricao VARCHAR(200) NOT NULL COMMENT 'OBRIGATÓRIO: Texto extraído do boleto (ex: "CONTA DE LUZ")',
-  valor DECIMAL(12,2) NOT NULL COMMENT 'OBRIGATÓRIO: Valor numérico extraído (ex: 150.50) - deve ser > 0',
-  categoria VARCHAR(50) NULL COMMENT 'OPCIONAL: Categoria inferida (ex: "Contas", "Energia")',
-  data_transacao DATE NOT NULL COMMENT 'OBRIGATÓRIO: Data no formato YYYY-MM-DD (data do boleto ou atual)',
-  forma_pagamento VARCHAR(20) NULL COMMENT 'OBRIGATÓRIO para despesas: dinheiro, pix, debito, credito, outro',
-  data_vencimento DATE NULL COMMENT 'OPCIONAL mas RECOMENDADO: Data de vencimento do boleto (YYYY-MM-DD)',
-  data_pagamento DATE NULL COMMENT 'OPCIONAL: Data de pagamento se paga=true (YYYY-MM-DD)',
-  paga BOOLEAN DEFAULT FALSE COMMENT 'OPCIONAL: true se boleto já foi pago, false caso contrário',
-  observacao TEXT NULL COMMENT 'OPCIONAL: Código de barras, linha digitável ou outras informações do boleto',
-  data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
+  cartao_id BIGINT NULL,
+  tipo VARCHAR(20) NOT NULL,
+  descricao VARCHAR(200) NOT NULL,
+  valor DECIMAL(12,2) NOT NULL,
+  categoria VARCHAR(50) NULL,
+  data_transacao DATE NOT NULL,
+  forma_pagamento VARCHAR(20) NULL,
+  data_vencimento DATE NULL,
+  data_pagamento DATE NULL,
+  paga BOOLEAN DEFAULT false,
+  observacao TEXT NULL,
+  data_criacao TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL,
-  INDEX transacao_usuario_data_idx (usuario_id, data_transacao DESC),
-  INDEX transacao_usuario_tipo_idx (usuario_id, tipo)
+  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL
 );
+
+CREATE INDEX transacao_usuario_data_idx ON transacoes (usuario_id, data_transacao DESC);
+CREATE INDEX transacao_usuario_tipo_idx ON transacoes (usuario_id, tipo);
+
+COMMENT ON COLUMN transacoes.usuario_id IS 'Obtido automaticamente do token de autenticação';
+COMMENT ON COLUMN transacoes.cartao_id IS 'Obrigatório apenas se forma_pagamento for credito ou debito';
+COMMENT ON COLUMN transacoes.tipo IS 'receita ou despesa - Para boletos sempre usar "despesa"';
+COMMENT ON COLUMN transacoes.descricao IS 'OBRIGATÓRIO: Texto extraído do boleto (ex: "CONTA DE LUZ")';
+COMMENT ON COLUMN transacoes.valor IS 'OBRIGATÓRIO: Valor numérico extraído (ex: 150.50) - deve ser > 0';
+COMMENT ON COLUMN transacoes.categoria IS 'OPCIONAL: Categoria inferida (ex: "Contas", "Energia")';
+COMMENT ON COLUMN transacoes.data_transacao IS 'OBRIGATÓRIO: Data no formato YYYY-MM-DD (data do boleto ou atual)';
+COMMENT ON COLUMN transacoes.forma_pagamento IS 'OBRIGATÓRIO para despesas: dinheiro, pix, debito, credito, outro';
+COMMENT ON COLUMN transacoes.data_vencimento IS 'OPCIONAL mas RECOMENDADO: Data de vencimento do boleto (YYYY-MM-DD)';
+COMMENT ON COLUMN transacoes.data_pagamento IS 'OPCIONAL: Data de pagamento se paga=true (YYYY-MM-DD)';
+COMMENT ON COLUMN transacoes.paga IS 'OPCIONAL: true se boleto já foi pago, false caso contrário';
+COMMENT ON COLUMN transacoes.observacao IS 'OPCIONAL: Código de barras, linha digitável ou outras informações do boleto';
 
 -- ============================================
 -- 4. METAS
 -- ============================================
 CREATE TABLE metas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
   titulo VARCHAR(200) NOT NULL,
   descricao TEXT NULL,
-  tipo ENUM('performance', 'habit') NOT NULL,
+  tipo tipo_meta NOT NULL,
   icone VARCHAR(50) NULL,
   cor_icone VARCHAR(20) NULL,
-  tipo_progresso ENUM('amount', 'completed', 'streak', 'weekly') DEFAULT 'amount',
+  tipo_progresso tipo_progresso DEFAULT 'amount',
   valor_atual DECIMAL(12,2) DEFAULT 0,
   valor_meta DECIMAL(12,2) NULL,
-  sequencia_atual INT DEFAULT 0,
-  concluida BOOLEAN DEFAULT FALSE,
-  pontos INT DEFAULT 0,
-  ativa BOOLEAN DEFAULT TRUE,
+  sequencia_atual INTEGER DEFAULT 0,
+  concluida BOOLEAN DEFAULT false,
+  pontos INTEGER DEFAULT 0,
+  ativa BOOLEAN DEFAULT true,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
-  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  INDEX (usuario_id)
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+CREATE INDEX metas_usuario_idx ON metas (usuario_id);
 
 -- ============================================
 -- 5. DESPESAS FIXAS
 -- ============================================
 CREATE TABLE despesas_fixas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
   descricao VARCHAR(200) NOT NULL,
   valor DECIMAL(12,2) NOT NULL,
   categoria VARCHAR(50) NULL,
-  dia_vencimento INT NOT NULL COMMENT 'Dia do mês (1-31)',
-  forma_pagamento VARCHAR(20) DEFAULT 'pix' COMMENT 'dinheiro, pix, debito, credito, outro',
-  cartao_id BIGINT UNSIGNED NULL,
-  ativa BOOLEAN DEFAULT TRUE,
+  dia_vencimento INTEGER NOT NULL,
+  forma_pagamento VARCHAR(20) DEFAULT 'pix',
+  cartao_id BIGINT NULL,
+  ativa BOOLEAN DEFAULT true,
   observacao TEXT NULL,
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL,
-  INDEX (usuario_id),
-  INDEX (usuario_id, dia_vencimento)
+  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL
 );
+
+CREATE INDEX despesas_fixas_usuario_idx ON despesas_fixas (usuario_id);
+CREATE INDEX despesas_fixas_usuario_dia_idx ON despesas_fixas (usuario_id, dia_vencimento);
+
+COMMENT ON COLUMN despesas_fixas.dia_vencimento IS 'Dia do mês (1-31)';
+COMMENT ON COLUMN despesas_fixas.forma_pagamento IS 'dinheiro, pix, debito, credito, outro';
 
 -- ============================================
 -- 6. PERFIL DE GAMIFICAÇÃO
 -- ============================================
 CREATE TABLE perfil_gamificacao (
-  usuario_id BIGINT UNSIGNED PRIMARY KEY,
-  nivel INT DEFAULT 1,
-  experiencia_atual INT DEFAULT 0,
-  experiencia_proximo_nivel INT DEFAULT 100,
-  pontos_totais INT DEFAULT 0,
-  sequencia_dias INT DEFAULT 0,
+  usuario_id BIGINT PRIMARY KEY,
+  nivel INTEGER DEFAULT 1,
+  experiencia_atual INTEGER DEFAULT 0,
+  experiencia_proximo_nivel INTEGER DEFAULT 100,
+  pontos_totais INTEGER DEFAULT 0,
+  sequencia_dias INTEGER DEFAULT 0,
   data_ultimo_login DATE NULL,
-  data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  data_atualizacao TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+-- ============================================
+-- 7. PERSONAL ACCESS TOKENS (Laravel Sanctum)
+-- ============================================
+CREATE TABLE personal_access_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  tokenable_type VARCHAR(255) NOT NULL,
+  tokenable_id BIGINT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  abilities TEXT NULL,
+  last_used_at TIMESTAMP NULL,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL
+);
+
+CREATE INDEX personal_access_tokens_tokenable_idx ON personal_access_tokens (tokenable_type, tokenable_id);
 
 -- ============================================
 -- INSERÇÃO DO USUÁRIO DE TESTE
@@ -180,7 +239,7 @@ VALUES (
   '$2y$10$uIgoss.tdhCa2owSImVvu.EJqE5.0ZrkhZO1h/2EoNNqPyGFQFV0K',
   NULL,
   NOW(),
-  TRUE,
+  true,
   NOW(),
   NOW()
 );
@@ -205,29 +264,32 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 -- DOCUMENTAÇÃO PARA INTEGRAÇÃO COM IA
 -- ============================================
 -- 
--- ENDPOINT PARA CADASTRAR DESPESA: POST /api/transacoes
+-- ENDPOINT: POST /api/transacoes
 -- 
 -- AUTENTICAÇÃO: Requer token Bearer no header Authorization
 -- Header: Authorization: Bearer {token_do_usuario}
+-- Content-Type: application/json
 --
--- CAMPOS MÍNIMOS OBRIGATÓRIOS PARA DESPESA:
---   1. tipo: "despesa" (string)
---   2. descricao: Texto extraído do boleto (string, max 200 chars)
---   3. valor: Valor numérico (decimal, min 0.01)
---   4. data_transacao: Data no formato YYYY-MM-DD
---   5. forma_pagamento: "dinheiro", "pix", "debito", "credito" ou "outro"
+-- ============================================
+-- 1. CADASTRAR DESPESA (BOLETO/COMPROVANTE)
+-- ============================================
 --
--- CAMPOS RECOMENDADOS PARA BOLETOS:
---   - categoria: Inferir do tipo de boleto (ex: "Contas", "Energia", "Água", "Internet")
---   - data_vencimento: Data de vencimento extraída do boleto
---   - observacao: Código de barras ou linha digitável para referência
+-- CAMPOS OBRIGATÓRIOS:
+--   - tipo: "despesa" (string, fixo)
+--   - descricao: Texto extraído do documento (string, max 200 chars)
+--   - valor: Valor numérico extraído (decimal, min 0.01)
+--   - data_transacao: Data no formato YYYY-MM-DD
+--   - forma_pagamento: "dinheiro", "pix", "debito", "credito" ou "outro"
 --
--- EXEMPLO COMPLETO DE REQUEST:
--- POST /api/transacoes
--- Headers:
---   Authorization: Bearer {token}
---   Content-Type: application/json
--- Body:
+-- CAMPOS OPCIONAIS (recomendados):
+--   - categoria: Categoria inferida (ex: "Contas", "Energia", "Água")
+--   - data_vencimento: Data de vencimento (YYYY-MM-DD)
+--   - data_pagamento: Data de pagamento se já foi pago (YYYY-MM-DD)
+--   - paga: true/false (padrão: false)
+--   - observacao: Código de barras, linha digitável, etc.
+--   - cartao_id: ID do cartão (obrigatório se forma_pagamento for "credito" ou "debito")
+--
+-- EXEMPLO DE PAYLOAD - DESPESA (BOLETO):
 -- {
 --   "tipo": "despesa",
 --   "descricao": "CONTA DE ENERGIA ELÉTRICA - REF NOV/2024",
@@ -240,26 +302,133 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 --   "observacao": "Código de barras: 34191.09008 01234.567890 12345.678901 2 98760000024580"
 -- }
 --
--- SUGESTÕES DE CATEGORIAS PARA BOLETOS:
---   - "Contas" (genérico)
+-- EXEMPLO DE PAYLOAD - DESPESA (COMPROVANTE PIX):
+-- {
+--   "tipo": "despesa",
+--   "descricao": "Pagamento PIX - Supermercado",
+--   "valor": 156.90,
+--   "categoria": "Alimentação",
+--   "data_transacao": "2024-11-20",
+--   "forma_pagamento": "pix",
+--   "paga": true,
+--   "data_pagamento": "2024-11-20"
+-- }
+--
+-- EXEMPLO DE PAYLOAD - DESPESA (CARTÃO DE CRÉDITO):
+-- {
+--   "tipo": "despesa",
+--   "descricao": "Compra no cartão - Loja XYZ",
+--   "valor": 89.50,
+--   "categoria": "Compras",
+--   "data_transacao": "2024-11-20",
+--   "forma_pagamento": "credito",
+--   "cartao_id": 1,
+--   "paga": false
+-- }
+--
+-- ============================================
+-- 2. CADASTRAR RECEITA (COMPROVANTE/DEPÓSITO)
+-- ============================================
+--
+-- CAMPOS OBRIGATÓRIOS:
+--   - tipo: "receita" (string, fixo)
+--   - descricao: Texto extraído do documento (string, max 200 chars)
+--   - valor: Valor numérico extraído (decimal, min 0.01)
+--   - data_transacao: Data no formato YYYY-MM-DD
+--
+-- CAMPOS OPCIONAIS (recomendados):
+--   - categoria: Categoria inferida (ex: "Salário", "Freelance", "Venda")
+--   - forma_pagamento: "dinheiro", "pix", "debito", "credito" ou "outro" (opcional para receita)
+--   - observacao: Informações adicionais do comprovante
+--   - cartao_id: ID do cartão se recebido via cartão
+--
+-- EXEMPLO DE PAYLOAD - RECEITA (DEPÓSITO SALÁRIO):
+-- {
+--   "tipo": "receita",
+--   "descricao": "Salário - Novembro 2024",
+--   "valor": 3500.00,
+--   "categoria": "Salário",
+--   "data_transacao": "2024-11-05",
+--   "forma_pagamento": "pix",
+--   "observacao": "Depósito automático - Empresa XYZ"
+-- }
+--
+-- EXEMPLO DE PAYLOAD - RECEITA (PIX RECEBIDO):
+-- {
+--   "tipo": "receita",
+--   "descricao": "Pagamento Freelance - Projeto ABC",
+--   "valor": 1200.00,
+--   "categoria": "Freelance",
+--   "data_transacao": "2024-11-20",
+--   "forma_pagamento": "pix",
+--   "observacao": "PIX recebido de João Silva"
+-- }
+--
+-- EXEMPLO DE PAYLOAD - RECEITA (VENDA):
+-- {
+--   "tipo": "receita",
+--   "descricao": "Venda de produto - Item XYZ",
+--   "valor": 450.00,
+--   "categoria": "Venda",
+--   "data_transacao": "2024-11-20",
+--   "forma_pagamento": "dinheiro"
+-- }
+--
+-- ============================================
+-- CATEGORIAS SUGERIDAS
+-- ============================================
+--
+-- CATEGORIAS PARA DESPESAS:
+--   - "Contas" (genérico para boletos)
 --   - "Energia" (conta de luz)
 --   - "Água" (conta de água)
 --   - "Internet" (provedor de internet)
 --   - "Telefone" (telefonia)
 --   - "TV/Streaming" (TV a cabo, streaming)
+--   - "Alimentação" (supermercado, restaurante)
+--   - "Transporte" (combustível, transporte público)
+--   - "Saúde" (farmácia, médico)
+--   - "Educação" (cursos, material escolar)
 --   - "Impostos" (impostos e taxas)
 --   - "Seguro" (seguros diversos)
 --   - "Financiamento" (parcelas de financiamento)
+--   - "Compras" (compras diversas)
 --   - "Outros" (quando não conseguir identificar)
 --
--- VALIDAÇÕES IMPORTANTES:
---   - valor deve ser numérico e maior que 0.01
---   - data_transacao deve estar no formato YYYY-MM-DD válido
---   - forma_pagamento deve ser uma das opções permitidas
---   - Se forma_pagamento for "credito" ou "debito", cartao_id se torna obrigatório
---   - Se paga=true, é recomendado enviar data_pagamento
+-- CATEGORIAS PARA RECEITAS:
+--   - "Salário" (salário fixo)
+--   - "Freelance" (trabalhos autônomos)
+--   - "Investimento" (rendimentos de investimentos)
+--   - "Venda" (venda de produtos/serviços)
+--   - "Aluguel" (recebimento de aluguel)
+--   - "Dividendos" (dividendos de ações)
+--   - "Presente" (dinheiro recebido como presente)
+--   - "Reembolso" (reembolsos diversos)
+--   - "Outros" (outras receitas)
 --
--- RESPOSTA DE SUCESSO (200):
+-- ============================================
+-- VALIDAÇÕES IMPORTANTES
+-- ============================================
+--
+-- REGRAS GERAIS:
+--   - valor: deve ser numérico e maior que 0.01
+--   - data_transacao: deve estar no formato YYYY-MM-DD válido
+--   - descricao: máximo 200 caracteres
+--   - categoria: máximo 50 caracteres
+--
+-- REGRAS ESPECÍFICAS PARA DESPESA:
+--   - forma_pagamento: OBRIGATÓRIO (uma das opções: dinheiro, pix, debito, credito, outro)
+--   - Se forma_pagamento for "credito" ou "debito": cartao_id se torna obrigatório
+--
+-- REGRAS ESPECÍFICAS PARA RECEITA:
+--   - forma_pagamento: OPCIONAL (pode ser omitido)
+--   - cartao_id: OPCIONAL (geralmente não usado para receitas)
+--
+-- ============================================
+-- RESPOSTAS DA API
+-- ============================================
+--
+-- SUCESSO (200):
 -- {
 --   "success": true,
 --   "message": "Transação criada com sucesso",
@@ -268,13 +437,27 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 --     "tipo": "despesa",
 --     "descricao": "CONTA DE ENERGIA ELÉTRICA - REF NOV/2024",
 --     "valor": "245.80",
---     ...
+--     "categoria": "Contas",
+--     "data_transacao": "2024-11-20",
+--     "forma_pagamento": "outro",
+--     "data_vencimento": "2024-11-25",
+--     "paga": false,
+--     "created_at": "2024-11-20T10:30:00.000000Z",
+--     "updated_at": "2024-11-20T10:30:00.000000Z"
 --   }
 -- }
 --
 -- ERROS COMUNS:
---   - 401: Token inválido ou expirado
---   - 422: Dados inválidos (validação falhou)
+--   - 401: Token inválido ou expirado (verificar Authorization header)
+--   - 422: Dados inválidos (validação falhou - verificar campos obrigatórios)
 --   - 500: Erro interno do servidor
 --
-
+-- EXEMPLO DE ERRO 422:
+-- {
+--   "message": "The given data was invalid.",
+--   "errors": {
+--     "tipo": ["O tipo da transação é obrigatório"],
+--     "valor": ["O valor deve ser maior que zero"]
+--   }
+-- }
+--
