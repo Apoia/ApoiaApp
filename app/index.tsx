@@ -14,6 +14,7 @@ export default function SplashScreen() {
           router.replace(isLoggedIn ? '/home' : '/login');
         }, 2000);
       } catch (error) {
+        await AuthValidation.clearAllData();
         setTimeout(() => {
           router.replace('/login');
         }, 2000);

@@ -29,7 +29,7 @@ export default function BottomNavigation({ items, onItemPress }: BottomNavigatio
       case 'home':
         return isActive ? 'home' : 'home-outline';
       case 'plus':
-        return 'add-circle-outline';
+        return isActive ? 'add-circle' : 'add-circle-outline';
       case 'trophy':
         return isActive ? 'trophy' : 'trophy-outline';
       case 'users':

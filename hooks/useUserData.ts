@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import mockData from '../data/mockData.json';
+import apiService from '../utils/apiService';
 import { AuthValidation } from '../utils/authValidation';
 
 export interface AppUserData {
   id: string;
   name: string;
   email: string;
-  registeredAt: string;
+  registeredAt?: string;
   profileImage?: string;
   level?: number;
   currentXP?: number;
@@ -26,15 +26,33 @@ export function useUserData() {
     try {
       const authData = await AuthValidation.getCurrentUser();
       if (authData) {
-        const appUserData: AppUserData = {
-          ...authData,
-          ...mockData.user,
-          name: authData.name,
-        };
-        setUserData(appUserData);
+        try {
+          const response = await apiService.get<{ success: boolean; data?: any }>('/usuario');
+          if (response.success && response.data) {
+            const appUserData: AppUserData = {
+              id: response.data.id?.toString() || authData.id,
+              name: response.data.nome || authData.name,
+              email: response.data.email || authData.email,
+              registeredAt: response.data.data_cadastro,
+              profileImage: response.data.imagem_perfil_url,
+            };
+            setUserData(appUserData);
+          } else {
+            setUserData({
+              id: authData.id,
+              name: authData.name,
+              email: authData.email,
+            });
+          }
+        } catch (error) {
+          setUserData({
+            id: authData.id,
+            name: authData.name,
+            email: authData.email,
+          });
+        }
       }
     } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
     } finally {
       setIsLoading(false);
     }

@@ -22,9 +22,7 @@ export default function SettingItem({ setting, onToggle, onPress }: SettingItemP
   const styles = createComponentStyles(colors);
 
   const handlePress = () => {
-    if (setting.type === 'toggle' && onToggle) {
-      onToggle(setting.id);
-    } else if (setting.type === 'navigation' && onPress) {
+    if (setting.type === 'navigation' && onPress) {
       onPress(setting.id);
     }
   };
@@ -33,7 +31,7 @@ export default function SettingItem({ setting, onToggle, onPress }: SettingItemP
     <TouchableOpacity 
       style={styles.settingItem} 
       onPress={handlePress}
-      disabled={setting.type === 'toggle'}
+      activeOpacity={0.7}
     >
       <View style={styles.settingIcon}>
         <Ionicons name={setting.icon as any} size={24} color={colors.primary} />

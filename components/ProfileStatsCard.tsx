@@ -17,7 +17,10 @@ export default function ProfileStatsCard({ stats }: ProfileStatsCardProps) {
   const { colors } = useTheme();
   const styles = createComponentStyles(colors);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return '-';
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'

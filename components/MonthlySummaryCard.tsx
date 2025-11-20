@@ -24,7 +24,10 @@ export default function MonthlySummaryCard({
   const { colors } = useTheme();
   const styles = createComponentStyles(colors);
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return '-';
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -65,7 +68,7 @@ export default function MonthlySummaryCard({
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Maior gasto</Text>
           <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {largestExpenseCategory}
+            {largestExpenseCategory || '-'}
           </Text>
         </View>
         

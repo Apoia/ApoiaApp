@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -36,7 +37,7 @@ export default function IndividualGoalCard({ goal, onPress }: IndividualGoalCard
     <TouchableOpacity style={styles.individualGoalCard} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.individualGoalHeader}>
         <View style={[styles.individualGoalIcon, { backgroundColor: goal.color + '20' }]}>
-          <Text style={styles.individualGoalEmoji}>{goal.icon}</Text>
+          <Ionicons name={goal.icon as any} size={24} color={goal.color} />
         </View>
         <View style={styles.individualGoalInfo}>
           <Text style={styles.individualGoalTitle}>{goal.title}</Text>

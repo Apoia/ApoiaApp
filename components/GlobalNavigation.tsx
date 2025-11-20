@@ -2,13 +2,28 @@ import { usePathname, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import mockData from '../data/mockData.json';
+import FeatureUnavailableModal from './FeatureUnavailableModal';
 import { createNavigationStyles } from '../styles/NavigationStyles';
 import BottomNavigation from './BottomNavigation';
+
+interface NavigationItem {
+  id: string;
+  title: string;
+  icon: string;
+  active?: boolean;
+}
 
 interface GlobalNavigationProps {
   children: React.ReactNode;
 }
+
+const navigationItemsData: NavigationItem[] = [
+  { id: 'home', title: 'Início', icon: 'home' },
+  { id: 'add', title: 'Adicionar', icon: 'plus' },
+  { id: 'goals', title: 'Metas', icon: 'trophy' },
+  { id: 'social', title: 'Social', icon: 'users' },
+  { id: 'profile', title: 'Perfil', icon: 'user' },
+];
 
 export default function GlobalNavigation({ children }: GlobalNavigationProps) {
   const router = useRouter();
@@ -16,9 +31,12 @@ export default function GlobalNavigation({ children }: GlobalNavigationProps) {
   const { colors } = useTheme();
   const styles = createNavigationStyles(colors);
   
+  const [showSocialModal, setShowSocialModal] = useState(false);
   const [navigationItems, setNavigationItems] = useState(
-    mockData.navigation.map(item => ({
-      ...item,
+    navigationItemsData.map(item => ({
+      id: item.id,
+      title: item.title,
+      icon: item.icon,
       active: item.id === getActiveTab(pathname)
     }))
   );
@@ -43,8 +61,10 @@ export default function GlobalNavigation({ children }: GlobalNavigationProps) {
   useEffect(() => {
     const activeTab = getActiveTab(pathname);
     setNavigationItems(
-      mockData.navigation.map(item => ({
-        ...item,
+      navigationItemsData.map(item => ({
+        id: item.id,
+        title: item.title,
+        icon: item.icon,
         active: item.id === activeTab
       }))
     );
@@ -68,9 +88,7 @@ export default function GlobalNavigation({ children }: GlobalNavigationProps) {
         }
         break;
       case 'social':
-        if (pathname !== '/social') {
-          router.push('/social');
-        }
+        setShowSocialModal(true);
         break;
       case 'profile':
         if (pathname !== '/profile') {
@@ -83,7 +101,7 @@ export default function GlobalNavigation({ children }: GlobalNavigationProps) {
   };
 
   
-  const shouldShowNavigation = !['/login', '/register', '/'].includes(pathname);
+  const shouldShowNavigation = !['/login', '/register', '/', '/add-despesa', '/edit-profile'].includes(pathname);
 
   return (
     <View style={styles.container}>
@@ -94,6 +112,13 @@ export default function GlobalNavigation({ children }: GlobalNavigationProps) {
           onItemPress={handleNavigationPress}
         />
       )}
+      
+      <FeatureUnavailableModal
+        visible={showSocialModal}
+        onClose={() => setShowSocialModal(false)}
+        title="Social Indisponível"
+        message="A funcionalidade Social está atualmente indisponível nesta versão, mas já está em andamento a implementação. Em breve você poderá interagir com outros usuários e compartilhar suas conquistas financeiras!"
+      />
     </View>
   );
 }
