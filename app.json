@@ -4,16 +4,17 @@
     "slug": "apoiaapp-gabriel",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logoBranco.jpeg",
+    "icon": "./assets/images/icon.png",
     "scheme": "apoiaapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gabrielcordeiro007.apoiaappgabriel"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logoBranco.jpeg",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.gabrielcordeiro007.apoiaappgabriel"
@@ -35,7 +36,8 @@
             "backgroundColor": "#ffffff"
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

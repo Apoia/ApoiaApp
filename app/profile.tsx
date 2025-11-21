@@ -3,12 +3,14 @@ import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import AboutModal from '../components/AboutModal'
-import AchievementCard from '../components/AchievementCard'
+import AchievementCarousel from '../components/AchievementCarousel'
 import PasswordVerificationModal from '../components/PasswordVerificationModal'
 import ProfileStatsCard from '../components/ProfileStatsCard'
 import SettingItem from '../components/SettingItem'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUserData } from '../hooks/useUserData'
+import { useNotifications } from '../hooks/useNotifications'
+import { Alert } from 'react-native'
 import { createProfileStyles } from '../styles/ProfileStyles'
 import apiService from '../utils/apiService'
 
@@ -32,6 +34,7 @@ export default function ProfileScreen() {
   const router = useRouter()
   const { colors, isDarkMode, toggleDarkMode } = useTheme()
   const { userData, logout } = useUserData()
+  const { expoPushToken, permissionStatus, solicitarPermissao } = useNotifications()
   const styles = createProfileStyles(colors)
 
   const [loading, setLoading] = useState(true)
@@ -40,6 +43,7 @@ export default function ProfileScreen() {
   const [level, setLevel] = useState<number | null>(null)
   const [showAboutModal, setShowAboutModal] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [notificacoesAtivas, setNotificacoesAtivas] = useState(true)
   const [settings, setSettings] = useState([
     {
       id: 1,
@@ -77,6 +81,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     loadProfileData()
+    loadNotificacaoPreferencias()
   }, [])
 
   const loadProfileData = async () => {
@@ -121,6 +126,22 @@ export default function ProfileScreen() {
     }
   }
 
+  const loadNotificacaoPreferencias = async () => {
+    try {
+      const response = await apiService.get<{ success: boolean; data?: any }>('/notificacoes/preferencias')
+      if (response.success && response.data) {
+        setNotificacoesAtivas(response.data.notificacoes_ativas ?? true)
+        setSettings((prev) =>
+          prev.map((setting) =>
+            setting.id === 1 ? { ...setting, value: response.data.notificacoes_ativas ?? true } : setting
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Erro ao carregar preferências de notificação:', error)
+    }
+  }
+
   const handleEditProfile = () => {
     router.push('/edit-profile')
   }
@@ -142,13 +163,51 @@ export default function ProfileScreen() {
     setShowAboutModal(false)
   }
 
-  const handleSettingToggle = (settingId: number, value: boolean) => {
+  const handleSettingToggle = async (settingId: number, value: boolean) => {
     if (settingId === 2) {
       toggleDarkMode()
+    } else if (settingId === 1) {
+      // Atualizar preferência de notificações
+      if (value) {
+        // Se está ativando, pedir permissão primeiro
+        if (permissionStatus !== 'granted') {
+          const permissaoConcedida = await solicitarPermissao()
+          
+          if (!permissaoConcedida) {
+            Alert.alert(
+              'Permissão Negada',
+              'Para receber notificações, é necessário permitir o acesso às notificações nas configurações do dispositivo.',
+              [
+                { text: 'OK' }
+              ]
+            )
+            // Não atualizar o toggle se permissão foi negada
+            return
+          }
+        }
+      }
+
+      try {
+        const response = await apiService.put('/notificacoes/preferencias', {
+          notificacoes_ativas: value
+        })
+        if (response.success) {
+          setNotificacoesAtivas(value)
+          setSettings((prev) =>
+            prev.map((setting) => (setting.id === settingId ? { ...setting, value } : setting))
+          )
+        } else {
+          Alert.alert('Erro', 'Não foi possível atualizar as preferências de notificação')
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar preferências de notificação:', error)
+        Alert.alert('Erro', 'Não foi possível atualizar as preferências de notificação')
+      }
+    } else {
+      setSettings((prev) =>
+        prev.map((setting) => (setting.id === settingId ? { ...setting, value } : setting))
+      )
     }
-    setSettings((prev) =>
-      prev.map((setting) => (setting.id === settingId ? { ...setting, value } : setting))
-    )
   }
 
   const handleLogout = async () => {
@@ -214,11 +273,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           {achievements.length > 0 ? (
-            <View style={styles.achievementsList}>
-              {achievements.map((achievement) => (
-                <AchievementCard key={achievement.id} achievement={achievement} />
-              ))}
-            </View>
+            <AchievementCarousel achievements={achievements} />
           ) : (
             <View style={styles.achievementsList}>
               <Text

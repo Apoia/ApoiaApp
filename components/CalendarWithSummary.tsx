@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -58,11 +58,7 @@ export default function CalendarWithSummary({ despesasFixas = [], summary: initi
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  useEffect(() => {
-    loadSummaryForMonth();
-  }, [mesSelecionado, anoSelecionado]);
-
-  const loadSummaryForMonth = async () => {
+  const loadSummaryForMonth = useCallback(async () => {
     try {
       setLoadingSummary(true);
       const response = await apiService.get<{ success: boolean; data?: MonthlySummary }>(
@@ -70,13 +66,20 @@ export default function CalendarWithSummary({ despesasFixas = [], summary: initi
       );
       if (response.success && response.data) {
         setSummary(response.data);
+      } else {
+        setSummary(null);
       }
     } catch (error) {
+      console.error('Erro ao carregar resumo mensal:', error);
       setSummary(null);
     } finally {
       setLoadingSummary(false);
     }
-  };
+  }, [mesSelecionado, anoSelecionado]);
+
+  useEffect(() => {
+    loadSummaryForMonth();
+  }, [loadSummaryForMonth]);
 
   const handleMonthChange = (month: number, year: number) => {
     setMesSelecionado(month + 1);

@@ -129,7 +129,11 @@ export default function GoalsScreen() {
                   
                   <View style={styles.goalsList}>
                     {performanceGoals.map((goal) => (
-                      <DetailedGoalCard key={goal.id} goal={goal} />
+                      <DetailedGoalCard 
+                        key={goal.id} 
+                        goal={goal}
+                        onPress={() => router.push(`/editar-meta?id=${goal.id}`)}
+                      />
                     ))}
                   </View>
                 </View>
@@ -149,7 +153,11 @@ export default function GoalsScreen() {
                   
                   <View style={styles.goalsList}>
                     {habitGoals.map((goal) => (
-                      <DetailedGoalCard key={goal.id} goal={goal} />
+                      <DetailedGoalCard 
+                        key={goal.id} 
+                        goal={goal}
+                        onPress={() => router.push(`/editar-meta?id=${goal.id}`)}
+                      />
                     ))}
                   </View>
                 </View>

@@ -120,22 +120,19 @@ CREATE TABLE transacoes (
   data_pagamento DATE NULL,
   paga BOOLEAN DEFAULT false,
   observacao TEXT NULL,
-  -- Campos para parcelamento
+  -- Campos para parcelamento (Master-Detail: transacao = cabeçalho, parcelas = detalhes)
   eh_parcelada BOOLEAN DEFAULT false,
   total_parcelas INTEGER NULL,
-  parcela_atual INTEGER NULL,
-  transacao_principal_id BIGINT NULL,
   data_criacao TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP NULL,
   updated_at TIMESTAMP NULL,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL,
-  FOREIGN KEY (transacao_principal_id) REFERENCES transacoes(id) ON DELETE CASCADE
+  FOREIGN KEY (cartao_id) REFERENCES cartoes(id) ON DELETE SET NULL
 );
 
 CREATE INDEX transacao_usuario_data_idx ON transacoes (usuario_id, data_transacao DESC);
 CREATE INDEX transacao_usuario_tipo_idx ON transacoes (usuario_id, tipo);
-CREATE INDEX transacao_principal_idx ON transacoes (transacao_principal_id);
+CREATE INDEX transacao_parcelada_idx ON transacoes (eh_parcelada) WHERE eh_parcelada = true;
 
 COMMENT ON COLUMN transacoes.usuario_id IS 'Obtido automaticamente do token de autenticação';
 COMMENT ON COLUMN transacoes.cartao_id IS 'Obrigatório apenas se forma_pagamento for credito ou debito';
@@ -149,23 +146,32 @@ COMMENT ON COLUMN transacoes.data_vencimento IS 'OPCIONAL mas RECOMENDADO: Data 
 COMMENT ON COLUMN transacoes.data_pagamento IS 'OPCIONAL: Data de pagamento se paga=true (YYYY-MM-DD)';
 COMMENT ON COLUMN transacoes.paga IS 'OPCIONAL: true se boleto já foi pago, false caso contrário';
 COMMENT ON COLUMN transacoes.observacao IS 'OPCIONAL: Código de barras, linha digitável ou outras informações do boleto';
-COMMENT ON COLUMN transacoes.eh_parcelada IS 'Indica se a transação faz parte de um parcelamento';
-COMMENT ON COLUMN transacoes.total_parcelas IS 'Total de parcelas da compra (apenas na primeira parcela)';
-COMMENT ON COLUMN transacoes.parcela_atual IS 'Número da parcela atual (1, 2, 3, etc.)';
-COMMENT ON COLUMN transacoes.transacao_principal_id IS 'ID da primeira transação do parcelamento (NULL se for a primeira)';
+COMMENT ON COLUMN transacoes.eh_parcelada IS 'Indica se a transação é parcelada (Master-Detail: transacao = cabeçalho da compra)';
+COMMENT ON COLUMN transacoes.total_parcelas IS 'Total de parcelas da compra (NULL se não for parcelada). Facilita queries sem precisar contar na tabela parcelas';
+COMMENT ON COLUMN transacoes.valor IS 'VALOR TOTAL da compra. Para transações parceladas, este é o valor total, não o valor da parcela';
 
 -- ============================================
--- 3.1. PARCELAS (Sistema de Parcelamento)
+-- 3.1. PARCELAS (Sistema de Parcelamento - Master-Detail)
 -- ============================================
 -- Esta tabela gerencia as parcelas de compras parceladas no cartão de crédito
--- Exemplo: TV de R$ 1.000,00 em 10x = 1 transação principal + 10 parcelas
+-- Exemplo: TV de R$ 1.000,00 em 10x = 1 transação (cabeçalho) + 10 parcelas (detalhes)
+--
+-- ARQUITETURA MASTER-DETAIL:
+-- - transacoes (MASTER) = Cabeçalho da compra (valor total, descrição, categoria)
+-- - parcelas (DETAIL) = Vencimentos individuais (cada parcela com seu próprio vencimento)
 --
 -- COMO FUNCIONA:
 -- 1. Usuário cadastra compra parcelada: "TV Samsung" - R$ 1.000,00 - 10x
--- 2. Sistema cria 1 transação principal (eh_parcelada=true, total_parcelas=10, parcela_atual=1)
--- 3. Sistema cria 10 registros na tabela parcelas (um para cada parcela)
--- 4. Cada parcela tem seu próprio vencimento e status de pagamento
--- 5. Quando uma parcela é paga, atualiza a transação correspondente
+-- 2. Sistema cria 1 transação (eh_parcelada=true, total_parcelas=10, valor=1000.00)
+-- 3. Sistema cria 10 registros na tabela parcelas automaticamente (um para cada parcela)
+-- 4. Cada parcela tem seu próprio vencimento e status de pagamento independente
+-- 5. Quando uma parcela é paga, apenas ela é marcada como paga
+-- 6. A transação principal só fica paga=true quando TODAS as parcelas estiverem pagas
+--
+-- VANTAGENS:
+-- - Sem redundância: cada informação tem um único lugar
+-- - Clareza conceitual: transação = compra, parcela = vencimento
+-- - Flexibilidade: cada parcela pode ser paga independentemente
 --
 CREATE TABLE parcelas (
   id BIGSERIAL PRIMARY KEY,
@@ -262,7 +268,77 @@ CREATE TABLE perfil_gamificacao (
 );
 
 -- ============================================
--- 7. PERSONAL ACCESS TOKENS (Laravel Sanctum)
+-- 7. CONQUISTAS (Gamificação)
+-- ============================================
+CREATE TABLE conquistas (
+  id BIGSERIAL PRIMARY KEY,
+  codigo VARCHAR(60) NOT NULL UNIQUE,
+  titulo VARCHAR(120) NOT NULL,
+  descricao TEXT NULL,
+  icone VARCHAR(40) NULL,
+  pontos_recompensa INTEGER DEFAULT 0,
+  tipo VARCHAR(30) NULL,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL
+);
+
+CREATE INDEX conquistas_codigo_idx ON conquistas (codigo);
+
+-- ============================================
+-- 7.1. CONQUISTAS DO USUÁRIO (Gamificação)
+-- ============================================
+CREATE TABLE conquistas_usuario (
+  usuario_id BIGINT NOT NULL,
+  conquista_id BIGINT NOT NULL,
+  data_conquista TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  PRIMARY KEY (usuario_id, conquista_id),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (conquista_id) REFERENCES conquistas(id) ON DELETE CASCADE
+);
+
+CREATE INDEX conquistas_usuario_usuario_idx ON conquistas_usuario (usuario_id);
+CREATE INDEX conquistas_usuario_conquista_idx ON conquistas_usuario (conquista_id);
+
+-- ============================================
+-- 8. NOTIFICAÇÕES - TOKENS
+-- ============================================
+CREATE TABLE notificacao_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
+  token VARCHAR(500) NOT NULL UNIQUE,
+  plataforma VARCHAR(20) DEFAULT 'expo',
+  device_id VARCHAR(200) NULL,
+  ativo BOOLEAN DEFAULT true,
+  ultimo_uso TIMESTAMP NULL,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE INDEX notificacao_tokens_usuario_idx ON notificacao_tokens (usuario_id);
+CREATE INDEX notificacao_tokens_token_idx ON notificacao_tokens (token);
+
+-- ============================================
+-- 8.1. NOTIFICAÇÕES - PREFERÊNCIAS
+-- ============================================
+CREATE TABLE notificacao_preferencias (
+  usuario_id BIGINT PRIMARY KEY,
+  notificacoes_ativas BOOLEAN DEFAULT true,
+  despesas_fixas_vencendo BOOLEAN DEFAULT true,
+  despesas_fixas_vencidas BOOLEAN DEFAULT true,
+  metas_concluidas BOOLEAN DEFAULT true,
+  conquistas_desbloqueadas BOOLEAN DEFAULT true,
+  lembretes_sequencia BOOLEAN DEFAULT true,
+  horario_lembrete TIME DEFAULT '09:00:00',
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- 9. PERSONAL ACCESS TOKENS (Laravel Sanctum)
 -- ============================================
 CREATE TABLE personal_access_tokens (
   id BIGSERIAL PRIMARY KEY,
@@ -394,12 +470,16 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 --   - data_primeira_parcela: Data de vencimento da primeira parcela (YYYY-MM-DD)
 --     Se não informado, será calculado automaticamente (próxima fatura do cartão)
 --
+-- ARQUITETURA MASTER-DETAIL:
+-- - transacoes (MASTER) = Cabeçalho da compra (valor total, descrição, categoria)
+-- - parcelas (DETAIL) = Vencimentos individuais (cada parcela com seu próprio vencimento)
+--
 -- COMO FUNCIONA:
 -- 1. IA identifica compra parcelada (ex: "TV Samsung - 10x de R$ 100,00")
 -- 2. IA envia payload com eh_parcelada=true e total_parcelas=10
--- 3. Backend cria 1 transação principal + 10 registros na tabela parcelas
--- 4. Cada parcela tem valor_parcela = valor_total / total_parcelas
--- 5. Cada parcela tem data_vencimento calculada automaticamente (mensal)
+-- 3. Backend cria 1 transação (cabeçalho) + 10 registros na tabela parcelas (detalhes)
+-- 4. Cada parcela tem valor_parcela = valor_total / total_parcelas (com tratamento de arredondamento)
+-- 5. Cada parcela tem data_vencimento calculada automaticamente (mensal a partir da primeira)
 --
 -- EXEMPLO DE PAYLOAD - DESPESA PARCELADA (TV R$ 1.000 em 10x):
 -- {
@@ -417,20 +497,35 @@ WHERE email = 'gabrielcordeirobarroso@gmail.com';
 --   "observacao": "Compra parcelada - Loja XYZ"
 -- }
 --
--- RESULTADO NO BANCO:
--- - 1 transação principal (id=100, valor=1000.00, eh_parcelada=true, total_parcelas=10)
--- - 10 parcelas na tabela parcelas:
---   * Parcela 1: valor_parcela=100.00, data_vencimento=2024-12-10
---   * Parcela 2: valor_parcela=100.00, data_vencimento=2025-01-10
---   * Parcela 3: valor_parcela=100.00, data_vencimento=2025-02-10
---   * ... até Parcela 10: data_vencimento=2025-09-10
+-- RESULTADO NO BANCO (MASTER-DETAIL):
+-- 
+-- 1 registro em transacoes (CABEÇALHO):
+-- {
+--   "id": 100,
+--   "descricao": "TV Samsung 55 polegadas - 10x sem juros",
+--   "valor": 1000.00,  -- VALOR TOTAL da compra
+--   "eh_parcelada": true,
+--   "total_parcelas": 10,
+--   "paga": false  -- Só fica true quando TODAS as parcelas estiverem pagas
+-- }
+--
+-- 10 registros em parcelas (DETALHES):
+-- [
+--   {"numero_parcela": 1, "valor_parcela": 100.00, "data_vencimento": "2024-12-10", "paga": false},
+--   {"numero_parcela": 2, "valor_parcela": 100.00, "data_vencimento": "2025-01-10", "paga": false},
+--   {"numero_parcela": 3, "valor_parcela": 100.00, "data_vencimento": "2025-02-10", "paga": false},
+--   ... até Parcela 10: {"numero_parcela": 10, "valor_parcela": 100.00, "data_vencimento": "2025-09-10", "paga": false}
+-- ]
 --
 -- NOTAS IMPORTANTES:
 --   - O valor enviado é o VALOR TOTAL da compra, não o valor da parcela
---   - O sistema calcula automaticamente o valor de cada parcela (valor / total_parcelas)
+--   - O sistema calcula automaticamente o valor de cada parcela (valor_total / total_parcelas)
+--   - Tratamento de arredondamento: última parcela recebe a diferença
 --   - Se data_primeira_parcela não for informada, usa o dia_vencimento do cartão
---   - Cada parcela será exibida separadamente no app, mas agrupada pela transação principal
---   - Ao pagar uma parcela, apenas ela é marcada como paga, não todas
+--   - Se cartão não tiver dia_vencimento, usa 30 dias a partir de hoje
+--   - Cada parcela pode ser paga independentemente
+--   - A transação principal só fica paga=true quando TODAS as parcelas estiverem pagas
+--   - Não há mais campos redundantes: parcela_atual e transacao_principal_id foram removidos
 --
 -- ============================================
 -- 2. CADASTRAR RECEITA (COMPROVANTE/DEPÓSITO)

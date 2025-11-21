@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
+import { borderRadius, shadows, spacing } from '../styles/theme';
 
 interface CustomAlertProps {
   visible: boolean;
@@ -11,18 +13,22 @@ interface CustomAlertProps {
 }
 
 export default function CustomAlert({ visible, type, title, message, onClose }: CustomAlertProps) {
+  const { colors, isDarkMode } = useTheme();
+
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return { name: 'checkmark-circle', color: '#27ae60' };
+        return { name: 'checkmark-circle', color: colors.success || '#10B981' };
       case 'error':
-        return { name: 'close-circle', color: '#e74c3c' };
+        return { name: 'close-circle', color: colors.error || '#EF4444' };
       case 'warning':
-        return { name: 'warning', color: '#f39c12' };
+        return { name: 'warning', color: colors.warning || '#F59E0B' };
     }
   };
 
   const icon = getIcon();
+
+  const styles = createStyles(colors, isDarkMode, icon.color);
 
   return (
     <Modal
@@ -34,13 +40,17 @@ export default function CustomAlert({ visible, type, title, message, onClose }: 
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.iconContainer}>
-            <Ionicons name={icon.name as any} size={60} color={icon.color} />
+            <Ionicons name={icon.name as any} size={64} color={icon.color} />
           </View>
           
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           
-          <TouchableOpacity style={[styles.button, { backgroundColor: icon.color }]} onPress={onClose}>
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={onClose}
+            activeOpacity={0.8}
+          >
             <Text style={styles.buttonText}>OK</Text>
           </TouchableOpacity>
         </View>
@@ -49,54 +59,60 @@ export default function CustomAlert({ visible, type, title, message, onClose }: 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, isDarkMode: boolean, iconColor: string) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
     alignItems: 'center',
-    maxWidth: 320,
+    maxWidth: 340,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    ...shadows.large,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
   },
   iconContainer: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: iconColor + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 25,
+    lineHeight: 24,
+    marginBottom: spacing.xl,
   },
   button: {
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderRadius: 25,
-    minWidth: 120,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    minWidth: 140,
+    backgroundColor: iconColor,
+    ...shadows.medium,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

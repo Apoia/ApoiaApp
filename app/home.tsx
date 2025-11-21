@@ -65,13 +65,7 @@ export default function HomeScreen() {
   const [isDespesaVencida, setIsDespesaVencida] = useState(false);
   const [despesasFixas, setDespesasFixas] = useState<DespesaFixa[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadHomeData();
-    }, [])
-  );
-
-  const loadHomeData = async () => {
+  const loadHomeData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -79,8 +73,11 @@ export default function HomeScreen() {
         const gamificacaoResponse = await apiService.get<{ success: boolean; data?: GamificationData }>('/gamificacao');
         if (gamificacaoResponse.success && gamificacaoResponse.data) {
           setGamification(gamificacaoResponse.data);
+        } else {
+          setGamification(null);
         }
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Erro ao carregar gamificação:', error);
         setGamification(null);
       }
 
@@ -88,8 +85,11 @@ export default function HomeScreen() {
         const summaryResponse = await apiService.get<{ success: boolean; data?: MonthlySummary }>('/resumo-mensal');
         if (summaryResponse.success && summaryResponse.data) {
           setMonthlySummary(summaryResponse.data);
+        } else {
+          setMonthlySummary(null);
         }
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Erro ao carregar resumo mensal:', error);
         setMonthlySummary(null);
       }
 
@@ -166,8 +166,11 @@ export default function HomeScreen() {
           }
           
           setGoals(allGoals);
+        } else {
+          setGoals([]);
         }
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Erro ao carregar metas:', error);
         setGoals([]);
       }
 
@@ -175,6 +178,8 @@ export default function HomeScreen() {
         const todasDespesas = await apiService.get<{ success: boolean; data?: DespesaFixa[] }>('/despesas-fixas');
         if (todasDespesas.success && todasDespesas.data) {
           setDespesasFixas(todasDespesas.data);
+        } else {
+          setDespesasFixas([]);
         }
         
         try {
@@ -186,7 +191,8 @@ export default function HomeScreen() {
             setShowAlertModal(true);
             return;
           }
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Erro ao carregar despesas vencidas:', error);
         }
         
         try {
@@ -200,15 +206,25 @@ export default function HomeScreen() {
               setShowAlertModal(true);
             }
           }
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Erro ao carregar próximas despesas:', error);
         }
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Erro ao carregar despesas fixas:', error);
+        setDespesasFixas([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erro geral ao carregar dados da home:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeData();
+    }, [loadHomeData])
+  );
 
   const handleConfirmarPagamento = async () => {
     if (!despesaFixaAlert) return;

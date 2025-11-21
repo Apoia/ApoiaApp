@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
+import { useRouter } from 'expo-router'
+import React, { useState } from 'react'
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -11,61 +11,84 @@ import {
   TextInput,
   TouchableOpacity,
   View
-} from 'react-native';
-import CustomAlert from '../components/CustomAlert';
-import { useTheme } from '../contexts/ThemeContext';
-import apiService from '../utils/apiService';
-import { formatCurrencyInput, parseCurrency } from '../utils/masks';
-import { createAddDespesaStyles } from '../styles/AddDespesaStyles';
+} from 'react-native'
+import CustomAlert from '../components/CustomAlert'
+import { useTheme } from '../contexts/ThemeContext'
+import { createAddDespesaStyles } from '../styles/AddDespesaStyles'
+import { spacing } from '../styles/theme'
+import apiService from '../utils/apiService'
+import { formatCurrencyInput, parseCurrency } from '../utils/masks'
 
 export default function CadastrarCartaoScreen() {
-  const router = useRouter();
-  const { colors } = useTheme();
-  const styles = createAddDespesaStyles(colors);
+  const router = useRouter()
+  const { colors } = useTheme()
+  const styles = createAddDespesaStyles(colors)
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
   const [alert, setAlert] = useState({
     visible: false,
     type: 'error' as 'success' | 'error' | 'warning',
     title: '',
     message: ''
-  });
+  })
 
-  const [nome, setNome] = useState('');
-  const [ultimos4Digitos, setUltimos4Digitos] = useState('');
-  const [bandeira, setBandeira] = useState('');
-  const [limiteTotal, setLimiteTotal] = useState('');
-  const [limiteTotalDisplay, setLimiteTotalDisplay] = useState('');
-  const [diaVencimento, setDiaVencimento] = useState('');
+  const [nome, setNome] = useState('')
+  const [ultimos4Digitos, setUltimos4Digitos] = useState('')
+  const [bandeira, setBandeira] = useState('')
+  const [showBandeiraDropdown, setShowBandeiraDropdown] = useState(false)
+  const [limiteTotal, setLimiteTotal] = useState('')
+  const [limiteTotalDisplay, setLimiteTotalDisplay] = useState('')
+  const [diaVencimento, setDiaVencimento] = useState('')
 
   const handleClose = () => {
-    router.back();
-  };
+    router.back()
+  }
 
   const handleLimiteChange = (text: string) => {
-    const formatted = formatCurrencyInput(text);
-    setLimiteTotalDisplay(formatted);
-    setLimiteTotal(String(parseCurrency(formatted)));
-  };
+    const formatted = formatCurrencyInput(text)
+    setLimiteTotalDisplay(formatted)
+    setLimiteTotal(String(parseCurrency(formatted)))
+  }
 
   const handleUltimos4Change = (text: string) => {
-    const numbers = text.replace(/[^\d]/g, '');
+    const numbers = text.replace(/[^\d]/g, '')
     if (numbers.length <= 4) {
-      setUltimos4Digitos(numbers);
+      setUltimos4Digitos(numbers)
     }
-  };
+  }
 
   const handleDiaVencimentoChange = (text: string) => {
-    const numbers = text.replace(/[^\d]/g, '');
+    const numbers = text.replace(/[^\d]/g, '')
     if (numbers.length <= 2) {
-      const day = parseInt(numbers) || 0;
+      const day = parseInt(numbers) || 0
       if (day >= 1 && day <= 31) {
-        setDiaVencimento(numbers);
+        setDiaVencimento(numbers)
       } else if (numbers === '') {
-        setDiaVencimento('');
+        setDiaVencimento('')
       }
     }
-  };
+  }
+
+  const BANDEIRAS_IMAGES = {
+    Visa: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png',
+    Mastercard:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/960px-Mastercard-logo.svg.png',
+    Elo: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Elo_logo.png',
+    Hipercard:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Hipercard_logo.svg/2000px-Hipercard_logo.svg.png'
+  }
+
+  const bandeiras = [
+    { value: 'Visa', label: 'Visa' },
+    { value: 'Mastercard', label: 'Mastercard' },
+    { value: 'Elo', label: 'Elo' },
+    { value: 'Hipercard', label: 'Hipercard' }
+  ]
+
+  const handleBandeiraSelect = (bandeiraValue: string) => {
+    setBandeira(bandeiraValue)
+    setShowBandeiraDropdown(false)
+  }
 
   const handleSubmit = async () => {
     if (!nome.trim()) {
@@ -74,25 +97,25 @@ export default function CadastrarCartaoScreen() {
         type: 'warning',
         title: 'Atenção',
         message: 'Preencha o nome do cartão'
-      });
-      return;
+      })
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       const data: any = {
         nome: nome.trim(),
         bandeira: bandeira.trim() || null,
         limite_total: limiteTotalDisplay ? parseCurrency(limiteTotalDisplay) : null,
-        dia_vencimento: diaVencimento ? parseInt(diaVencimento) : null,
-      };
-
-      if (ultimos4Digitos) {
-        data.ultimos_4_digitos = ultimos4Digitos;
+        dia_vencimento: diaVencimento ? parseInt(diaVencimento) : null
       }
 
-      const response = await apiService.post('/cartoes', data);
+      if (ultimos4Digitos) {
+        data.ultimos_4_digitos = ultimos4Digitos
+      }
+
+      const response = await apiService.post('/cartoes', data)
 
       if (response.success) {
         setAlert({
@@ -100,18 +123,18 @@ export default function CadastrarCartaoScreen() {
           type: 'success',
           title: 'Sucesso!',
           message: 'Cartão cadastrado com sucesso'
-        });
+        })
 
         setTimeout(() => {
-          router.back();
-        }, 1500);
+          router.back()
+        }, 1500)
       } else {
         setAlert({
           visible: true,
           type: 'error',
           title: 'Erro',
           message: response.message || 'Erro ao cadastrar cartão'
-        });
+        })
       }
     } catch (error: any) {
       setAlert({
@@ -119,11 +142,11 @@ export default function CadastrarCartaoScreen() {
         type: 'error',
         title: 'Erro',
         message: error.response?.data?.message || 'Erro ao conectar com o servidor'
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -170,13 +193,122 @@ export default function CadastrarCartaoScreen() {
 
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Bandeira</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: Visa, Mastercard..."
-              value={bandeira}
-              onChangeText={setBandeira}
-              placeholderTextColor={colors.textSecondary}
-            />
+            <TouchableOpacity
+              style={[
+                styles.input,
+                { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }
+              ]}
+              onPress={() => setShowBandeiraDropdown(!showBandeiraDropdown)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                {bandeira && BANDEIRAS_IMAGES[bandeira as keyof typeof BANDEIRAS_IMAGES] ? (
+                  <>
+                    <View
+                      style={{
+                        width: 50,
+                        height: 30,
+                        marginRight: spacing.sm,
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Image
+                        source={{
+                          uri: BANDEIRAS_IMAGES[bandeira as keyof typeof BANDEIRAS_IMAGES]
+                        }}
+                        style={{
+                          width: '100%',
+                          height: '100%'
+                        }}
+                        contentFit="contain"
+                        recyclingKey={bandeira}
+                      />
+                    </View>
+                    <Text style={[styles.inputText, { color: colors.text }]}>{bandeira}</Text>
+                  </>
+                ) : (
+                  <Text style={[styles.inputText, { color: colors.textSecondary }]}>
+                    Selecione uma bandeira...
+                  </Text>
+                )}
+              </View>
+              <Ionicons
+                name={showBandeiraDropdown ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {showBandeiraDropdown && (
+              <View
+                style={[
+                  styles.dropdown,
+                  { backgroundColor: colors.surface, borderColor: colors.border }
+                ]}
+              >
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {bandeiras.map((bandeiraOption, index) => (
+                    <TouchableOpacity
+                      key={bandeiraOption.value}
+                      style={[
+                        styles.dropdownItem,
+                        {
+                          borderBottomWidth: index !== bandeiras.length - 1 ? 1 : 0,
+                          borderBottomColor: colors.border
+                        },
+                        bandeira === bandeiraOption.value && {
+                          backgroundColor: colors.primary + '20'
+                        }
+                      ]}
+                      onPress={() => handleBandeiraSelect(bandeiraOption.value)}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <View
+                          style={{
+                            width: 60,
+                            height: 36,
+                            marginRight: spacing.md,
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Image
+                            source={{
+                              uri: BANDEIRAS_IMAGES[
+                                bandeiraOption.value as keyof typeof BANDEIRAS_IMAGES
+                              ]
+                            }}
+                            style={{
+                              width: '100%',
+                              height: '100%'
+                            }}
+                            contentFit="contain"
+                            recyclingKey={bandeiraOption.value}
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.dropdownText,
+                            { color: colors.text },
+                            bandeira === bandeiraOption.value && {
+                              fontWeight: '600',
+                              color: colors.primary
+                            }
+                          ]}
+                        >
+                          {bandeiraOption.label}
+                        </Text>
+                      </View>
+                      {bandeira === bandeiraOption.value && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
 
           <View style={styles.fieldContainer}>
@@ -212,9 +344,7 @@ export default function CadastrarCartaoScreen() {
             onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Salvando...' : 'Salvar Cartão'}
-            </Text>
+            <Text style={styles.submitButtonText}>{loading ? 'Salvando...' : 'Salvar Cartão'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -227,6 +357,5 @@ export default function CadastrarCartaoScreen() {
         onClose={() => setAlert({ ...alert, visible: false })}
       />
     </SafeAreaView>
-  );
+  )
 }
-

@@ -7,7 +7,7 @@ import { createAddStyles } from '../styles/AddStyles';
 
 export default function AddScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const styles = createAddStyles(colors);
 
   const options = [
@@ -16,8 +16,10 @@ export default function AddScreen() {
       title: 'Despesa',
       subtitle: 'Registre uma nova despesa',
       icon: 'remove-circle',
-      color: '#EF4444',
-      gradient: ['#FEE2E2', '#FEF2F2'],
+      color: isDarkMode ? '#F87171' : '#EF4444',
+      gradient: isDarkMode 
+        ? ['#7F1D1D', '#991B1B'] // Dark: vermelho escuro
+        : ['#FEE2E2', '#FEF2F2'], // Light: vermelho claro
       onPress: () => router.push('/add-despesa'),
     },
     {
@@ -25,8 +27,10 @@ export default function AddScreen() {
       title: 'Renda',
       subtitle: 'Registre uma nova entrada',
       icon: 'add-circle',
-      color: '#10B981',
-      gradient: ['#D1FAE5', '#ECFDF5'],
+      color: isDarkMode ? '#34D399' : '#10B981',
+      gradient: isDarkMode 
+        ? ['#064E3B', '#065F46'] // Dark: verde escuro
+        : ['#D1FAE5', '#ECFDF5'], // Light: verde claro
       onPress: () => router.push('/add-receita'),
     },
     {
@@ -34,8 +38,10 @@ export default function AddScreen() {
       title: 'Despesa Fixa',
       subtitle: 'Gerencie contas recorrentes',
       icon: 'calendar',
-      color: '#F59E0B',
-      gradient: ['#FEF3C7', '#FFFBEB'],
+      color: isDarkMode ? '#FBBF24' : '#F59E0B',
+      gradient: isDarkMode 
+        ? ['#78350F', '#92400E'] // Dark: laranja escuro
+        : ['#FEF3C7', '#FFFBEB'], // Light: laranja claro
       onPress: () => router.push('/despesas-fixas'),
     },
   ];
@@ -72,14 +78,21 @@ export default function AddScreen() {
                 style={[
                   styles.optionCard,
                   { 
-                    backgroundColor: option.gradient[1],
-                    borderColor: option.color + '30',
+                    backgroundColor: isDarkMode ? colors.surface : option.gradient[1],
+                    borderColor: isDarkMode ? option.color + '40' : option.color + '30',
                   }
                 ]}
                 onPress={option.onPress}
                 activeOpacity={0.8}
               >
-                <View style={[styles.iconWrapper, { backgroundColor: option.gradient[0] }]}>
+                <View style={[
+                  styles.iconWrapper, 
+                  { 
+                    backgroundColor: isDarkMode 
+                      ? option.color + '20' 
+                      : option.gradient[0] 
+                  }
+                ]}>
                   <Ionicons name={option.icon as any} size={40} color={option.color} />
                 </View>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>

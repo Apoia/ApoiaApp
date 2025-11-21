@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useFocusEffect, useRouter } from 'expo-router'
+import React, { useCallback, useState } from 'react'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,51 +11,52 @@ import {
   TextInput,
   TouchableOpacity,
   View
-} from 'react-native';
-import CartaoModal from '../components/CartaoModal';
-import CustomAlert from '../components/CustomAlert';
-import NewCategoryModal from '../components/NewCategoryModal';
-import { useTheme } from '../contexts/ThemeContext';
-import apiService from '../utils/apiService';
-import { formatCurrencyInput, parseCurrency } from '../utils/masks';
-import { createAddDespesaStyles } from '../styles/AddDespesaStyles';
-import { spacing } from '../styles/theme';
+} from 'react-native'
+import CartaoModal from '../components/CartaoModal'
+import CustomAlert from '../components/CustomAlert'
+import NewCategoryModal from '../components/NewCategoryModal'
+import { useTheme } from '../contexts/ThemeContext'
+import { createAddDespesaStyles } from '../styles/AddDespesaStyles'
+import { spacing } from '../styles/theme'
+import apiService from '../utils/apiService'
+import { formatCurrencyInput, parseCurrency } from '../utils/masks'
 
 interface Cartao {
-  id: number;
-  nome: string;
-  ultimos_4_digitos?: string;
-  bandeira?: string;
+  id: number
+  nome: string
+  ultimos_4_digitos?: string
+  bandeira?: string
 }
 
-
 export default function CadastrarDespesaFixaScreen() {
-  const router = useRouter();
-  const { colors } = useTheme();
-  const styles = createAddDespesaStyles(colors);
+  const router = useRouter()
+  const { colors } = useTheme()
+  const styles = createAddDespesaStyles(colors)
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
   const [alert, setAlert] = useState({
     visible: false,
     type: 'error' as 'success' | 'error' | 'warning',
     title: '',
     message: ''
-  });
+  })
 
-  const [descricao, setDescricao] = useState('');
-  const [valor, setValor] = useState('');
-  const [valorDisplay, setValorDisplay] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [diaVencimento, setDiaVencimento] = useState('');
-  const [formaPagamento, setFormaPagamento] = useState<'dinheiro' | 'pix' | 'debito' | 'credito' | 'outro'>('pix');
-  const [cartoes, setCartoes] = useState<Cartao[]>([]);
-  const [cartaoSelecionado, setCartaoSelecionado] = useState<number | null>(null);
-  const [showCartaoModal, setShowCartaoModal] = useState(false);
-  const [showCartaoDropdown, setShowCartaoDropdown] = useState(false);
-  const [showCategorias, setShowCategorias] = useState(false);
-  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [observacao, setObservacao] = useState('');
+  const [descricao, setDescricao] = useState('')
+  const [valor, setValor] = useState('')
+  const [valorDisplay, setValorDisplay] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [diaVencimento, setDiaVencimento] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState<
+    'dinheiro' | 'pix' | 'debito' | 'credito' | 'outro'
+  >('pix')
+  const [cartoes, setCartoes] = useState<Cartao[]>([])
+  const [cartaoSelecionado, setCartaoSelecionado] = useState<number | null>(null)
+  const [showCartaoModal, setShowCartaoModal] = useState(false)
+  const [showCartaoDropdown, setShowCartaoDropdown] = useState(false)
+  const [showCategorias, setShowCategorias] = useState(false)
+  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false)
+  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [observacao, setObservacao] = useState('')
 
   const categoriasDespesaBase = [
     'Alimentação',
@@ -93,36 +94,36 @@ export default function CadastrarDespesaFixaScreen() {
     'Doações',
     'Empréstimos',
     'Investimentos'
-  ];
+  ]
 
-  const categoriasDespesa = [...categoriasDespesaBase, ...customCategories];
+  const categoriasDespesa = [...categoriasDespesaBase, ...customCategories]
 
   useFocusEffect(
     useCallback(() => {
-      loadCartoes();
-      loadCustomCategories();
+      loadCartoes()
+      loadCustomCategories()
     }, [])
-  );
+  )
 
   const loadCustomCategories = async () => {
     try {
-      const stored = await AsyncStorage.getItem('customCategories_despesa');
+      const stored = await AsyncStorage.getItem('customCategories_despesa')
       if (stored) {
-        setCustomCategories(JSON.parse(stored));
+        setCustomCategories(JSON.parse(stored))
       }
     } catch (error) {
-      setCustomCategories([]);
+      setCustomCategories([])
     }
-  };
+  }
 
   const saveCustomCategory = async (categoryName: string) => {
     try {
-      const updated = [...customCategories, categoryName];
-      setCustomCategories(updated);
-      await AsyncStorage.setItem('customCategories_despesa', JSON.stringify(updated));
-      setCategoria(categoryName);
+      const updated = [...customCategories, categoryName]
+      setCustomCategories(updated)
+      await AsyncStorage.setItem('customCategories_despesa', JSON.stringify(updated))
+      setCategoria(categoryName)
       if (!descricao.trim()) {
-        setDescricao(categoryName);
+        setDescricao(categoryName)
       }
     } catch (error) {
       setAlert({
@@ -130,70 +131,77 @@ export default function CadastrarDespesaFixaScreen() {
         type: 'error',
         title: 'Erro',
         message: 'Erro ao salvar categoria'
-      });
+      })
     }
-  };
+  }
 
   const loadCartoes = async () => {
     try {
-      const response = await apiService.get<{ success: boolean; data?: Cartao[] }>('/cartoes');
+      const response = await apiService.get<{ success: boolean; data?: Cartao[] }>('/cartoes')
       if (response.success && response.data) {
-        setCartoes(response.data);
+        setCartoes(response.data)
       }
     } catch (error) {
-      setCartoes([]);
+      setCartoes([])
     }
-  };
+  }
 
   const handleValorChange = (text: string) => {
-    const formatted = formatCurrencyInput(text);
-    setValorDisplay(formatted);
-    setValor(String(parseCurrency(formatted)));
-  };
+    const formatted = formatCurrencyInput(text)
+    setValorDisplay(formatted)
+    setValor(String(parseCurrency(formatted)))
+  }
 
   const handleDiaVencimentoChange = (text: string) => {
-    const numeric = text.replace(/\D/g, '');
+    const numeric = text.replace(/\D/g, '')
     if (numeric.length <= 2) {
-      setDiaVencimento(numeric);
+      setDiaVencimento(numeric)
     }
-  };
+  }
 
-  const handleFormaPagamentoPress = async (forma: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'outro') => {
+  const handleFormaPagamentoPress = async (
+    forma: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'outro'
+  ) => {
     if (forma === 'credito' || forma === 'debito') {
       if (cartoes.length === 0) {
-        setShowCartaoModal(true);
-        return;
+        setShowCartaoModal(true)
+        return
       }
-      setFormaPagamento(forma);
-      setShowCartaoDropdown(true);
+      setFormaPagamento(forma)
+      setShowCartaoDropdown(true)
     } else {
-      setFormaPagamento(forma);
-      setCartaoSelecionado(null);
-      setShowCartaoDropdown(false);
+      setFormaPagamento(forma)
+      setCartaoSelecionado(null)
+      setShowCartaoDropdown(false)
     }
-  };
+  }
+
+  const handleCadastrarCartao = () => {
+    setShowCartaoModal(false)
+    router.push('/cadastrar-cartao')
+  }
 
   const handleCategoriaSelect = (cat: string) => {
     if (cat === 'Outros...') {
-      setShowCategorias(false);
-      setShowNewCategoryModal(true);
-      return;
+      setShowCategorias(false)
+      setShowNewCategoryModal(true)
+      return
     }
-    
+
     if (categoria === cat) {
-      setCategoria('');
+      setCategoria('')
     } else {
-      setCategoria(cat);
+      setCategoria(cat)
       if (!descricao.trim()) {
-        setDescricao(cat);
+        setDescricao(cat)
       }
     }
-    setShowCategorias(false);
-  };
+    setShowCategorias(false)
+  }
 
   const handleClose = () => {
-    router.back();
-  };
+    router.back()
+  }
 
   const handleSubmit = async () => {
     if (!descricao.trim()) {
@@ -202,30 +210,30 @@ export default function CadastrarDespesaFixaScreen() {
         type: 'warning',
         title: 'Atenção',
         message: 'Preencha a descrição'
-      });
-      return;
+      })
+      return
     }
 
-    const valorNumero = parseCurrency(valorDisplay);
+    const valorNumero = parseCurrency(valorDisplay)
     if (!valorDisplay || valorNumero <= 0) {
       setAlert({
         visible: true,
         type: 'warning',
         title: 'Atenção',
         message: 'Preencha um valor válido'
-      });
-      return;
+      })
+      return
     }
 
-    const dia = parseInt(diaVencimento);
+    const dia = parseInt(diaVencimento)
     if (!diaVencimento || dia < 1 || dia > 31) {
       setAlert({
         visible: true,
         type: 'warning',
         title: 'Atenção',
         message: 'Preencha o dia de vencimento (1-31)'
-      });
-      return;
+      })
+      return
     }
 
     if ((formaPagamento === 'credito' || formaPagamento === 'debito') && !cartaoSelecionado) {
@@ -234,11 +242,11 @@ export default function CadastrarDespesaFixaScreen() {
         type: 'warning',
         title: 'Atenção',
         message: 'Selecione um cartão'
-      });
-      return;
+      })
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       const data: any = {
@@ -247,14 +255,14 @@ export default function CadastrarDespesaFixaScreen() {
         categoria: categoria.trim() || null,
         dia_vencimento: dia,
         forma_pagamento: formaPagamento,
-        observacao: observacao.trim() || null,
-      };
-
-      if (cartaoSelecionado) {
-        data.cartao_id = cartaoSelecionado;
+        observacao: observacao.trim() || null
       }
 
-      const response = await apiService.post('/despesas-fixas', data);
+      if (cartaoSelecionado) {
+        data.cartao_id = cartaoSelecionado
+      }
+
+      const response = await apiService.post('/despesas-fixas', data)
 
       if (response.success) {
         setAlert({
@@ -262,18 +270,18 @@ export default function CadastrarDespesaFixaScreen() {
           type: 'success',
           title: 'Sucesso!',
           message: 'Despesa fixa cadastrada com sucesso'
-        });
+        })
 
         setTimeout(() => {
-          router.back();
-        }, 1500);
+          router.back()
+        }, 1500)
       } else {
         setAlert({
           visible: true,
           type: 'error',
           title: 'Erro',
           message: response.message || 'Erro ao cadastrar despesa fixa'
-        });
+        })
       }
     } catch (error: any) {
       setAlert({
@@ -281,19 +289,19 @@ export default function CadastrarDespesaFixaScreen() {
         type: 'error',
         title: 'Erro',
         message: error.response?.data?.message || 'Erro ao conectar com o servidor'
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const formasPagamento = [
     { value: 'dinheiro', label: 'Dinheiro', icon: 'cash' },
     { value: 'pix', label: 'PIX', icon: 'flash' },
     { value: 'debito', label: 'Débito', icon: 'card' },
     { value: 'credito', label: 'Crédito', icon: 'card-outline' },
-    { value: 'outro', label: 'Outro', icon: 'ellipsis-horizontal' },
-  ];
+    { value: 'outro', label: 'Outro', icon: 'ellipsis-horizontal' }
+  ]
 
   return (
     <SafeAreaView style={styles.container}>
@@ -318,7 +326,8 @@ export default function CadastrarDespesaFixaScreen() {
           <View style={styles.infoSection}>
             <Ionicons name="information-circle" size={24} color={colors.primary} />
             <Text style={styles.infoText}>
-              Despesas fixas são contas que se repetem todo mês. Você receberá lembretes e ganhará pontos ao pagar em dia!
+              Despesas fixas são contas que se repetem todo mês. Você receberá lembretes e ganhará
+              pontos ao pagar em dia!
             </Text>
           </View>
 
@@ -351,22 +360,25 @@ export default function CadastrarDespesaFixaScreen() {
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Categoria</Text>
             <TouchableOpacity
-              style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              style={[
+                styles.input,
+                { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }
+              ]}
               onPress={() => setShowCategorias(!showCategorias)}
             >
               <Text style={[styles.inputText, !categoria && { color: colors.textSecondary }]}>
                 {categoria || 'Selecione uma categoria...'}
               </Text>
-              <Ionicons 
-                name={showCategorias ? 'chevron-up' : 'chevron-down'} 
-                size={20} 
-                color={colors.textSecondary} 
+              <Ionicons
+                name={showCategorias ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
-            
+
             {showCategorias && (
               <View style={styles.dropdown}>
-                <ScrollView 
+                <ScrollView
                   style={styles.dropdownScroll}
                   nestedScrollEnabled={true}
                   showsVerticalScrollIndicator={true}
@@ -380,10 +392,12 @@ export default function CadastrarDespesaFixaScreen() {
                       ]}
                       onPress={() => handleCategoriaSelect(cat)}
                     >
-                      <Text style={[
-                        styles.dropdownText,
-                        categoria === cat && styles.dropdownTextSelected
-                      ]}>
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          categoria === cat && styles.dropdownTextSelected
+                        ]}
+                      >
                         {cat}
                       </Text>
                       {categoria === cat && (
@@ -394,12 +408,24 @@ export default function CadastrarDespesaFixaScreen() {
                   <TouchableOpacity
                     style={[
                       styles.dropdownItem,
-                      { borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.xs, paddingTop: spacing.md }
+                      {
+                        borderTopWidth: 1,
+                        borderTopColor: colors.border,
+                        marginTop: spacing.xs,
+                        paddingTop: spacing.md
+                      }
                     ]}
                     onPress={() => handleCategoriaSelect('Outros...')}
                   >
-                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
-                    <Text style={[styles.dropdownText, { color: colors.primary, fontWeight: '600' }]}>
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={20}
+                      color={colors.primary}
+                      style={{ marginRight: spacing.sm }}
+                    />
+                    <Text
+                      style={[styles.dropdownText, { color: colors.primary, fontWeight: '600' }]}
+                    >
                       Outros...
                     </Text>
                   </TouchableOpacity>
@@ -422,9 +448,7 @@ export default function CadastrarDespesaFixaScreen() {
               />
               <Text style={styles.dayLabel}>do mês</Text>
             </View>
-            <Text style={styles.helperText}>
-              Digite o dia do mês em que a conta vence (1-31)
-            </Text>
+            <Text style={styles.helperText}>Digite o dia do mês em que a conta vence (1-31)</Text>
           </View>
 
           <View style={styles.fieldContainer}>
@@ -439,49 +463,86 @@ export default function CadastrarDespesaFixaScreen() {
                   ]}
                   onPress={() => handleFormaPagamentoPress(forma.value as any)}
                 >
-                  <Ionicons 
-                    name={forma.icon as any} 
-                    size={20} 
-                    color={formaPagamento === forma.value ? '#fff' : colors.text} 
+                  <Ionicons
+                    name={forma.icon as any}
+                    size={20}
+                    color={formaPagamento === forma.value ? '#fff' : colors.text}
                   />
-                  <Text style={[
-                    styles.optionText,
-                    formaPagamento === forma.value && styles.optionTextSelected
-                  ]}>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      formaPagamento === forma.value && styles.optionTextSelected
+                    ]}
+                  >
                     {forma.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {(formaPagamento === 'credito' || formaPagamento === 'debito') && showCartaoDropdown && cartoes.length > 0 && (
-              <View style={styles.dropdown}>
-                {cartoes.map((cartao, index) => (
+            {(formaPagamento === 'credito' || formaPagamento === 'debito') &&
+              showCartaoDropdown &&
+              cartoes.length > 0 && (
+                <View style={styles.dropdown}>
+                  {cartoes.map((cartao, index) => (
+                    <TouchableOpacity
+                      key={cartao.id}
+                      style={[
+                        styles.dropdownItem,
+                        cartaoSelecionado === cartao.id && styles.dropdownItemSelected,
+                        { borderBottomWidth: 1, borderBottomColor: colors.border }
+                      ]}
+                      onPress={() => {
+                        setCartaoSelecionado(cartao.id)
+                        setShowCartaoDropdown(false)
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          cartaoSelecionado === cartao.id && styles.dropdownTextSelected
+                        ]}
+                      >
+                        {cartao.nome}{' '}
+                        {cartao.ultimos_4_digitos ? `****${cartao.ultimos_4_digitos}` : ''}
+                      </Text>
+                      {cartaoSelecionado === cartao.id && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
                   <TouchableOpacity
-                    key={cartao.id}
                     style={[
                       styles.dropdownItem,
-                      cartaoSelecionado === cartao.id && styles.dropdownItemSelected,
-                      index === cartoes.length - 1 && { borderBottomWidth: 0 }
+                      {
+                        borderTopWidth: 1,
+                        borderTopColor: colors.border,
+                        marginTop: spacing.xs,
+                        paddingTop: spacing.md,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderBottomWidth: 0
+                      }
                     ]}
                     onPress={() => {
-                      setCartaoSelecionado(cartao.id);
-                      setShowCartaoDropdown(false);
+                      setShowCartaoDropdown(false)
+                      router.push('/cadastrar-cartao')
                     }}
                   >
-                    <Text style={[
-                      styles.dropdownText,
-                      cartaoSelecionado === cartao.id && styles.dropdownTextSelected
-                    ]}>
-                      {cartao.nome} {cartao.ultimos_4_digitos ? `****${cartao.ultimos_4_digitos}` : ''}
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={20}
+                      color={colors.primary}
+                      style={{ marginRight: spacing.sm }}
+                    />
+                    <Text
+                      style={[styles.dropdownText, { color: colors.primary, fontWeight: '600' }]}
+                    >
+                      Cadastrar Novo Cartão
                     </Text>
-                    {cartaoSelecionado === cartao.id && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                    )}
                   </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                </View>
+              )}
           </View>
 
           <View style={styles.fieldContainer}>
@@ -519,7 +580,7 @@ export default function CadastrarDespesaFixaScreen() {
       <CartaoModal
         visible={showCartaoModal}
         onClose={() => setShowCartaoModal(false)}
-        onCadastrar={handleClose}
+        onCadastrar={handleCadastrarCartao}
       />
 
       <CustomAlert
@@ -530,5 +591,5 @@ export default function CadastrarDespesaFixaScreen() {
         onClose={() => setAlert({ ...alert, visible: false })}
       />
     </SafeAreaView>
-  );
+  )
 }

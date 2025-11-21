@@ -131,8 +131,8 @@ export class AuthValidation {
   static async isLoggedIn(): Promise<boolean> {
     try {
       const token = await AsyncStorage.getItem(this.TOKEN_KEY)
-      const currentUser = await this.getCurrentUser()
-      return token !== null && currentUser !== null
+      const isLoggedInFlag = await AsyncStorage.getItem('isLoggedIn')
+      return token !== null && isLoggedInFlag === 'true'
     } catch (error) {
       console.error('Erro ao verificar status de login:', error)
       return false

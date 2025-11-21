@@ -307,7 +307,7 @@ export default function AddDespesaScreen() {
         data.cartao_id = cartaoSelecionado;
       }
 
-      const response = await apiService.post('/transacoes', data);
+      const response = await apiService.post<{ success: boolean; message?: string }>('/transacoes', data);
 
       if (response.success) {
         setAlert({
@@ -349,10 +349,10 @@ export default function AddDespesaScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container as any}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={styles.keyboardView as any}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -529,7 +529,7 @@ export default function AddDespesaScreen() {
                       key={cartao.id}
                       style={[
                         styles.dropdownItem,
-                        { borderBottomWidth: cartao.id !== cartoes[cartoes.length - 1].id ? 1 : 0, borderBottomColor: colors.border },
+                        { borderBottomWidth: 1, borderBottomColor: colors.border },
                         cartaoSelecionado === cartao.id && { backgroundColor: colors.primary + '20' }
                       ]}
                       onPress={() => {
@@ -544,6 +544,28 @@ export default function AddDespesaScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownItem,
+                      { 
+                        borderTopWidth: 1, 
+                        borderTopColor: colors.border,
+                        marginTop: spacing.xs,
+                        paddingTop: spacing.md,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                      }
+                    ]}
+                    onPress={() => {
+                      setShowCartaoDropdown(false);
+                      router.push('/cadastrar-cartao');
+                    }}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
+                    <Text style={[styles.dropdownText, { color: colors.primary, fontWeight: '600' }]}>
+                      Cadastrar Novo Cartão
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>

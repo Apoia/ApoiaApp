@@ -24,7 +24,9 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`
+    // Tentar primeiro com a URL principal
+    let url = `${this.baseURL}${endpoint}`
+    let useFallback = false
 
     // Buscar token de autenticação apenas se não for rota pública
     const isPublic = this.isPublicEndpoint(endpoint)
@@ -47,7 +49,16 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config)
+      // Adicionar timeout para evitar requisições infinitas
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT)
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
 
       // Se não autorizado em rota protegida, limpar token
       if (response.status === 401 && !isPublic) {
@@ -66,7 +77,62 @@ class ApiService {
 
       const data = await response.json()
       return data
-    } catch (error) {
+    } catch (error: any) {
+      // Se falhar com localhost e houver fallback URL, tentar novamente
+      if (!useFallback && API_CONFIG.FALLBACK_URL && this.baseURL.includes('localhost')) {
+        console.log('Tentando URL alternativa (Wi-Fi)...')
+        useFallback = true
+        url = `${API_CONFIG.FALLBACK_URL}${endpoint}`
+        
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT)
+          
+          const response = await fetch(url, {
+            ...config,
+            signal: controller.signal
+          })
+          
+          clearTimeout(timeoutId)
+          
+          if (response.status === 401 && !isPublic) {
+            await AsyncStorage.removeItem(this.TOKEN_KEY)
+            await AsyncStorage.removeItem('currentUser')
+            await AsyncStorage.removeItem('isLoggedIn')
+            throw new Error('Sessão expirada. Faça login novamente.')
+          }
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            const error = new Error(errorData.message || `HTTP error! status: ${response.status}`)
+            ;(error as any).response = { data: errorData, status: response.status }
+            throw error
+          }
+          
+          const data = await response.json()
+          return data
+        } catch (retryError: any) {
+          // Se ainda falhar, continuar com o tratamento de erro original
+          error = retryError
+        }
+      }
+      
+      // Tratar erros de timeout e rede
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('Tempo de requisição excedido. Verifique sua conexão.')
+        ;(timeoutError as any).response = { status: 408, data: { message: 'Request timeout' } }
+        console.error('API Timeout:', timeoutError)
+        throw timeoutError
+      }
+      
+      // Tratar erros de rede (sem conexão)
+      if (error.message && (error.message.includes('Network request failed') || error.message.includes('Failed to fetch'))) {
+        const networkError = new Error('Erro de conexão. Verifique sua internet e se a API está rodando.')
+        ;(networkError as any).response = { status: 0, data: { message: 'Network error' } }
+        console.error('API Network Error:', networkError)
+        throw networkError
+      }
+      
       console.error('API Error:', error)
       throw error
     }
